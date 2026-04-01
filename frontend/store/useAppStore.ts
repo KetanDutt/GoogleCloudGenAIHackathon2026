@@ -1,0 +1,164 @@
+import { create } from 'zustand';
+import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI } from '../lib/api';
+import toast from 'react-hot-toast';
+
+export interface Task {
+  id?: string;
+  user_id: string;
+  task_name: string;
+  deadline?: string;
+  created_at?: string;
+  status?: string; // Optional for UI tracking
+}
+
+export interface Note {
+  id?: string;
+  user_id: string;
+  content: string;
+  summary?: string;
+  action_items?: string[];
+  created_at?: string;
+}
+
+export interface Message {
+  id: string;
+  role: 'user' | 'ai';
+  content: string;
+  timestamp: string;
+  intent?: string;
+}
+
+interface AppState {
+  messages: Message[];
+  tasks: Task[];
+  notes: Note[];
+  isLoading: boolean;
+  activeAgent: string | null;
+  workflowStep: 'idle' | 'orchestrating' | 'processing' | 'saving' | 'done';
+  addMessage: (msg: Message) => void;
+  sendMessage: (text: string) => Promise<void>;
+  loadTasks: () => Promise<void>;
+  loadNotes: () => Promise<void>;
+  completeTask: (taskName: string) => Promise<void>;
+}
+
+export const useAppStore = create<AppState>((set, get) => ({
+  messages: [],
+  tasks: [],
+  notes: [],
+  isLoading: false,
+  activeAgent: null,
+  workflowStep: 'idle',
+
+  addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
+
+  sendMessage: async (text: string) => {
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: text,
+      timestamp: new Date().toISOString(),
+    };
+    get().addMessage(userMsg);
+    set({ isLoading: true, workflowStep: 'orchestrating', activeAgent: 'Orchestrator' });
+
+    try {
+      // Simulate orchestrator thinking for visualization
+      await new Promise(r => setTimeout(r, 800));
+
+      const response = await sendChatRequest(text);
+
+      const intent = response.intent;
+      set({ activeAgent: intent.charAt(0).toUpperCase() + intent.slice(1), workflowStep: 'processing' });
+
+      // Simulate processing time
+      await new Promise(r => setTimeout(r, 1000));
+
+      set({ workflowStep: 'saving' });
+      // Simulate saving DB time
+      await new Promise(r => setTimeout(r, 600));
+
+      let contentStr = '';
+      if (typeof response.response === 'object') {
+        contentStr = JSON.stringify(response.response, null, 2);
+      } else {
+        contentStr = String(response.response);
+      }
+
+      const aiMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'ai',
+        content: `Executed via ${intent} agent. \n\n${contentStr}`,
+        timestamp: new Date().toISOString(),
+        intent,
+      };
+
+      get().addMessage(aiMsg);
+      set({ workflowStep: 'done', isLoading: false, activeAgent: null });
+
+      // Refresh data
+      if (intent === 'planner' || intent === 'calendar') {
+        get().loadTasks();
+      } else if (intent === 'notes') {
+        get().loadNotes();
+      }
+
+      // Reset workflow visualizer after a bit
+      setTimeout(() => set({ workflowStep: 'idle' }), 2000);
+
+    } catch (error: unknown) {
+      console.error(error);
+      const errorMessage = error instanceof Error ? error.message : 'Something went wrong.';
+      const errorMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'ai',
+        content: `Error: ${errorMessage}`,
+        timestamp: new Date().toISOString(),
+      };
+      get().addMessage(errorMsg);
+      set({ isLoading: false, workflowStep: 'idle', activeAgent: null });
+    }
+  },
+
+  loadTasks: async () => {
+    try {
+      const data = await fetchTasks();
+      set({ tasks: data });
+    } catch (error) {
+      console.error('Failed to load tasks', error);
+      toast.error('Failed to load tasks');
+    }
+  },
+
+  completeTask: async (taskName: string) => {
+    try {
+      // Optimistic update
+      set((state) => ({
+        tasks: state.tasks.map((t) =>
+          t.task_name === taskName ? { ...t, status: 'completed' } : t
+        )
+      }));
+      await completeTaskAPI(taskName);
+      toast.success('Task marked as completed');
+    } catch (error) {
+      console.error('Failed to complete task', error);
+      toast.error('Failed to update task');
+      // Revert on error
+      get().loadTasks();
+    }
+  },
+
+  loadNotes: async () => {
+    try {
+      const data = await fetchNotes();
+      // Handle json parsing for action_items if it's stored as string
+      const parsedNotes = data.map((n: { id?: string; user_id: string; content: string; summary?: string; action_items?: string | string[]; created_at?: string }) => ({
+        ...n,
+        action_items: typeof n.action_items === 'string' ? JSON.parse(n.action_items) : n.action_items,
+      }));
+      set({ notes: parsedNotes });
+    } catch (error) {
+      console.error('Failed to load notes', error);
+    }
+  },
+}));
