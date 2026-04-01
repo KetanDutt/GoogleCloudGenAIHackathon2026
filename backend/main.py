@@ -12,11 +12,20 @@ from agents.reminder import assess_urgency
 from tools.task_tools import add_task, list_tasks
 from tools.notes_tools import save_note, fetch_notes
 from tools.calendar_tools import schedule_event
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="AI Personal Operations Manager",
     description="Multi-Agent System for Managing Tasks, Notes, and Calendars",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 def handle_request(request: ChatRequest) -> ChatResponse:
