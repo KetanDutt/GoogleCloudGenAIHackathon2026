@@ -14,7 +14,12 @@ class Task(BaseModel):
     user_id: str
     task_name: str
     deadline: Optional[str] = None
+    status: Optional[str] = "pending"
     created_at: Optional[str] = None
+
+class TaskCompleteRequest(BaseModel):
+    user_id: str = "default_user"
+    task_name: str
 
 class Note(BaseModel):
     id: Optional[str] = None

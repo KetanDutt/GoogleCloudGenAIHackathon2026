@@ -23,3 +23,8 @@ export const fetchNotes = async (userId: string = "default_user") => {
   const response = await api.get(`/notes?user_id=${userId}`);
   return response.data;
 };
+
+export const completeTaskAPI = async (taskName: string, userId: string = "default_user") => {
+  const response = await api.put('/tasks/complete', { user_id: userId, task_name: taskName });
+  return response.data;
+};

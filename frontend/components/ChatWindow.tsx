@@ -7,6 +7,8 @@ import "regenerator-runtime/runtime";
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export function MessageBubble({ role, content, timestamp, intent }: { role: string; content: string; timestamp: string; intent?: string }) {
   const isUser = role === "user";
@@ -27,13 +29,13 @@ export function MessageBubble({ role, content, timestamp, intent }: { role: stri
       <div>
         <div
           className={clsx(
-            "p-3 rounded-2xl text-sm whitespace-pre-wrap shadow-sm",
+            "p-3 rounded-2xl text-sm shadow-sm prose prose-sm max-w-none dark:prose-invert",
             isUser
-              ? "bg-blue-600 text-white rounded-tr-sm"
+              ? "bg-blue-600 text-white rounded-tr-sm prose-p:text-white prose-a:text-white"
               : "bg-white border border-gray-100 text-gray-800 rounded-tl-sm dark:bg-zinc-800 dark:border-zinc-700 dark:text-gray-100"
           )}
         >
-          {content}
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
         <div className={clsx("flex items-center gap-2 mt-1 px-1", isUser && "justify-end")}>
           <span className="text-[10px] text-gray-400">

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { sendChatRequest, fetchTasks, fetchNotes } from '../lib/api';
+import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI } from '../lib/api';
+import toast from 'react-hot-toast';
 
 export interface Task {
   id?: string;
@@ -38,6 +39,7 @@ interface AppState {
   sendMessage: (text: string) => Promise<void>;
   loadTasks: () => Promise<void>;
   loadNotes: () => Promise<void>;
+  completeTask: (taskName: string) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -124,6 +126,25 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ tasks: data });
     } catch (error) {
       console.error('Failed to load tasks', error);
+      toast.error('Failed to load tasks');
+    }
+  },
+
+  completeTask: async (taskName: string) => {
+    try {
+      // Optimistic update
+      set((state) => ({
+        tasks: state.tasks.map((t) =>
+          t.task_name === taskName ? { ...t, status: 'completed' } : t
+        )
+      }));
+      await completeTaskAPI(taskName);
+      toast.success('Task marked as completed');
+    } catch (error) {
+      console.error('Failed to complete task', error);
+      toast.error('Failed to update task');
+      // Revert on error
+      get().loadTasks();
     }
   },
 

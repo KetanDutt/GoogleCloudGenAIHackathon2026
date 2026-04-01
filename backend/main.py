@@ -1,15 +1,17 @@
+import json
+import asyncio
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-from models.schemas import ChatRequest, ChatResponse, Task, Note, Event
+from models.schemas import ChatRequest, ChatResponse, Task, Note, Event, TaskCompleteRequest
 from agents.orchestrator import route_user_input
 from agents.planner import generate_tasks
 from agents.calendar import schedule_task
 from agents.notes import summarize_and_extract
 from agents.reminder import assess_urgency
 
-from tools.task_tools import add_task, list_tasks
+from tools.task_tools import add_task, list_tasks, complete_task_status
 from tools.notes_tools import save_note, fetch_notes
 from tools.calendar_tools import schedule_event
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,32 +30,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def handle_request(request: ChatRequest) -> ChatResponse:
+async def handle_request(request: ChatRequest) -> ChatResponse:
     """
-    Main workflow engine. Routes user input and processes it through specialized agents.
+    Main workflow engine. Routes user input and processes it through specialized agents asynchronously.
     """
     user_input = request.user_input
     user_id = request.user_id
 
     # 1. Orchestrate
-    intent = route_user_input(user_input)
+    intent = await asyncio.to_thread(route_user_input, user_input)
     response_data = {}
 
     try:
         if intent == "planner":
             # Generate tasks
-            tasks = generate_tasks(user_input)
+            tasks = await asyncio.to_thread(generate_tasks, user_input)
             scheduled_tasks = []
 
             for task_name in tasks:
                 # Schedule each task via calendar agent
-                time_suggestion = schedule_task(task_name)
+                time_suggestion = await asyncio.to_thread(schedule_task, task_name)
                 start_time = time_suggestion.get("start_time")
                 end_time = time_suggestion.get("end_time")
 
                 # Store in BigQuery
-                add_task(user_id, task_name, start_time)
-                schedule_event(user_id, task_name, start_time, end_time)
+                await asyncio.to_thread(add_task, user_id, task_name, start_time)
+                await asyncio.to_thread(schedule_event, user_id, task_name, start_time, end_time)
 
                 scheduled_tasks.append({
                     "task": task_name,
@@ -65,15 +67,14 @@ def handle_request(request: ChatRequest) -> ChatResponse:
 
         elif intent == "notes":
             # Summarize and extract
-            extracted = summarize_and_extract(user_input)
+            extracted = await asyncio.to_thread(summarize_and_extract, user_input)
             summary = extracted.get("summary")
             action_items = extracted.get("action_items", [])
 
-            import json
             action_items_str = json.dumps(action_items)
 
             # Save notes
-            save_note(user_id, user_input, summary, action_items_str)
+            await asyncio.to_thread(save_note, user_id, user_input, summary, action_items_str)
 
             response_data = {
                 "summary": summary,
@@ -82,11 +83,11 @@ def handle_request(request: ChatRequest) -> ChatResponse:
 
         elif intent == "calendar":
             # Schedule a single event
-            time_suggestion = schedule_task(user_input)
+            time_suggestion = await asyncio.to_thread(schedule_task, user_input)
             start_time = time_suggestion.get("start_time")
             end_time = time_suggestion.get("end_time")
 
-            schedule_event(user_id, user_input, start_time, end_time)
+            await asyncio.to_thread(schedule_event, user_id, user_input, start_time, end_time)
 
             response_data = {
                 "event_scheduled": user_input,
@@ -95,7 +96,7 @@ def handle_request(request: ChatRequest) -> ChatResponse:
             }
 
         elif intent == "reminder":
-            urgency_data = assess_urgency(user_input)
+            urgency_data = await asyncio.to_thread(assess_urgency, user_input)
             response_data = {
                 "reminder_set_for": user_input,
                 "urgency": urgency_data.get("urgency_level"),
@@ -113,18 +114,26 @@ def handle_request(request: ChatRequest) -> ChatResponse:
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     """Chat endpoint to process user input."""
-    return handle_request(request)
+    return await handle_request(request)
 
 @app.get("/tasks", response_model=List[Dict[str, Any]])
 async def get_tasks_endpoint(user_id: str = "default_user"):
     """Returns user tasks."""
-    tasks = list_tasks(user_id)
+    tasks = await asyncio.to_thread(list_tasks, user_id)
     return tasks
+
+@app.put("/tasks/complete")
+async def complete_task_endpoint(request: TaskCompleteRequest):
+    """Marks a user task as complete."""
+    success = await asyncio.to_thread(complete_task_status, request.user_id, request.task_name)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to complete task")
+    return {"message": "Task completed successfully"}
 
 @app.get("/notes", response_model=List[Dict[str, Any]])
 async def get_notes_endpoint(user_id: str = "default_user"):
     """Returns user notes."""
-    notes = fetch_notes(user_id)
+    notes = await asyncio.to_thread(fetch_notes, user_id)
     return notes
 
 @app.get("/health")

@@ -2,12 +2,12 @@
 
 import { useEffect } from "react";
 import { useAppStore } from "@/store/useAppStore";
-import { CheckCircle2, Clock, RotateCw, Calendar } from "lucide-react";
+import { CheckCircle2, Clock, RotateCw, Calendar, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 
 export default function TaskList() {
-  const { tasks, loadTasks, isLoading } = useAppStore();
+  const { tasks, loadTasks, isLoading, completeTask } = useAppStore();
 
   useEffect(() => {
     loadTasks();
@@ -34,45 +34,70 @@ export default function TaskList() {
 
       {tasks.length === 0 ? (
         <div className="text-center py-12">
-          <Calendar className="w-12 h-12 mx-auto text-gray-200 mb-3" />
+          <Calendar className="w-12 h-12 mx-auto text-gray-200 mb-3 dark:text-gray-700" />
           <p className="text-gray-500 font-medium">No tasks found.</p>
           <p className="text-sm text-gray-400 mt-1">Ask the AI to plan your day!</p>
         </div>
       ) : (
         <div className="space-y-3">
           <AnimatePresence>
-            {tasks.map((task, index) => (
-              <motion.div
-                key={task.id || index}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="group flex items-start gap-4 p-4 rounded-xl border border-gray-100 hover:border-indigo-200 hover:shadow-md transition-all bg-gray-50/30 dark:bg-zinc-800/50 dark:border-zinc-800 dark:hover:border-indigo-500/30"
-              >
-                <div className="pt-1">
-                  <div className="w-5 h-5 rounded-md border-2 border-gray-300 flex items-center justify-center cursor-pointer group-hover:border-indigo-500 transition-colors">
-                    <CheckCircle2 className="w-3 h-3 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            {tasks.map((task, index) => {
+              const isCompleted = task.status === 'completed';
+              return (
+                <motion.div
+                  key={task.id || task.task_name + index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={clsx(
+                    "group flex items-start gap-4 p-4 rounded-xl border transition-all",
+                    isCompleted
+                      ? "border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/30 dark:bg-emerald-900/10 opacity-70"
+                      : "border-gray-100 bg-gray-50/30 hover:border-indigo-200 hover:shadow-md dark:bg-zinc-800/50 dark:border-zinc-800 dark:hover:border-indigo-500/30"
+                  )}
+                >
+                  <div className="pt-1">
+                    <button
+                      onClick={() => !isCompleted && completeTask(task.task_name)}
+                      disabled={isCompleted}
+                      className={clsx(
+                        "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors focus:outline-none",
+                        isCompleted
+                          ? "bg-emerald-500 border-emerald-500 cursor-default"
+                          : "border-gray-300 cursor-pointer group-hover:border-indigo-500 dark:border-gray-600"
+                      )}
+                    >
+                      <Check className={clsx("w-3.5 h-3.5", isCompleted ? "text-white opacity-100" : "text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity")} />
+                    </button>
                   </div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-800 dark:text-gray-200">{task.task_name}</h3>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                    {task.deadline && (
-                      <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-md dark:bg-zinc-700">
-                        <Clock className="w-3 h-3" />
-                        Deadline: {new Date(task.deadline).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                      </span>
-                    )}
-                    {task.created_at && (
-                      <span className="flex items-center gap-1">
-                        Created: {new Date(task.created_at).toLocaleDateString()}
-                      </span>
-                    )}
+                  <div className="flex-1">
+                    <h3 className={clsx(
+                      "font-medium transition-colors",
+                      isCompleted ? "text-gray-500 line-through dark:text-gray-500" : "text-gray-800 dark:text-gray-200"
+                    )}>
+                      {task.task_name}
+                    </h3>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                      {task.deadline && (
+                        <span className={clsx(
+                          "flex items-center gap-1 px-2 py-1 rounded-md",
+                          isCompleted ? "bg-transparent text-gray-400" : "bg-gray-100 dark:bg-zinc-700"
+                        )}>
+                          <Clock className="w-3 h-3" />
+                          Deadline: {new Date(task.deadline).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>
+                      )}
+                      {task.created_at && (
+                        <span className="flex items-center gap-1 opacity-70">
+                          Created: {new Date(task.created_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
       )}

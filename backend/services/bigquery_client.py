@@ -31,6 +31,7 @@ def _ensure_tables_exist():
             bigquery.SchemaField("user_id", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("task_name", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("deadline", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("status", "STRING", mode="NULLABLE", default_value_expression="'pending'"),
             bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE", default_value_expression="CURRENT_TIMESTAMP()"),
         ]
         task_table = bigquery.Table(f"{dataset_id}.tasks", schema=task_schema)
@@ -70,7 +71,7 @@ def insert_task(user_id: str, task_name: str, deadline: str = None) -> bool:
 
     table_ref = f"{dataset_id}.tasks"
     rows_to_insert = [
-        {"user_id": user_id, "task_name": task_name, "deadline": deadline}
+        {"user_id": user_id, "task_name": task_name, "deadline": deadline, "status": "pending"}
     ]
     try:
         errors = client.insert_rows_json(table_ref, rows_to_insert)
@@ -81,7 +82,10 @@ def insert_task(user_id: str, task_name: str, deadline: str = None) -> bool:
 
 def get_tasks(user_id: str) -> List[Dict[str, Any]]:
     if not client:
-        return [{"user_id": user_id, "task_name": "Mock Task", "deadline": "2024-01-01"}]
+        return [
+            {"user_id": user_id, "task_name": "Mock Task", "deadline": "2024-01-01", "status": "pending"},
+            {"user_id": user_id, "task_name": "Completed Mock Task", "deadline": "2023-12-01", "status": "completed"}
+        ]
 
     query = f"""
         SELECT * FROM `{dataset_id}.tasks`
@@ -99,6 +103,32 @@ def get_tasks(user_id: str) -> List[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Failed to get tasks: {e}")
         return []
+
+def update_task_status(user_id: str, task_name: str, status: str) -> bool:
+    if not client:
+        logger.warning(f"Mock update_task_status: {user_id}, {task_name} -> {status}")
+        return True
+
+    query = f"""
+        UPDATE `{dataset_id}.tasks`
+        SET status = @status
+        WHERE user_id = @user_id AND task_name = @task_name
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("status", "STRING", status),
+            bigquery.ScalarQueryParameter("user_id", "STRING", user_id),
+            bigquery.ScalarQueryParameter("task_name", "STRING", task_name),
+        ]
+    )
+
+    try:
+        query_job = client.query(query, job_config=job_config)
+        query_job.result() # Wait for completion
+        return True
+    except Exception as e:
+        logger.error(f"Failed to update task status: {e}")
+        return False
 
 def insert_note(user_id: str, content: str, summary: str = None, action_items: str = None) -> bool:
     if not client:
