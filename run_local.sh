@@ -21,6 +21,11 @@ fi
 
 echo -e "\n[1/3] Setting up Backend..."
 cd backend
+if [ ! -f ".env" ]; then
+    echo "Creating backend .env from .env.example..."
+    cp .env.example .env
+fi
+
 if [ ! -d "venv" ]; then
     echo "Creating virtual environment..."
     python3 -m venv venv
@@ -31,12 +36,20 @@ pip install -r requirements.txt
 
 # Start backend in background
 echo "Starting FastAPI Backend..."
-uvicorn main:app --reload --port 8080 &
+# Load port from .env if present
+export $(grep -v '^#' .env | xargs)
+PORT=${PORT:-8080}
+uvicorn main:app --reload --port $PORT &
 BACKEND_PID=$!
 cd ..
 
 echo -e "\n[2/3] Setting up Frontend..."
 cd frontend
+if [ ! -f ".env" ]; then
+    echo "Creating frontend .env from .env.example..."
+    cp .env.example .env
+fi
+
 echo "Installing frontend dependencies..."
 npm install
 
@@ -47,7 +60,7 @@ FRONTEND_PID=$!
 cd ..
 
 echo -e "\n[3/3] System is running!"
-echo "Backend: http://localhost:8080"
+echo "Backend: http://localhost:$PORT"
 echo "Frontend: http://localhost:3000"
 echo "Press Ctrl+C to stop both servers."
 
