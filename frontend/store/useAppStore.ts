@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI } from '../lib/api';
+import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI, fetchHealth } from '../lib/api';
 import toast from 'react-hot-toast';
 
 export interface Task {
@@ -43,11 +43,13 @@ interface AppState {
   activeAgent: string | null;
   workflowStep: 'idle' | 'orchestrating' | 'processing' | 'saving' | 'done';
   agentTrace: AgentTraceStep[];
+  systemHealth: { status: string; bigquery: string; vertex_ai: string } | null;
   addMessage: (msg: Message) => void;
   sendMessage: (text: string) => Promise<void>;
   loadTasks: () => Promise<void>;
   loadNotes: () => Promise<void>;
   completeTask: (taskName: string) => Promise<void>;
+  loadHealth: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -58,6 +60,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeAgent: null,
   workflowStep: 'idle',
   agentTrace: [],
+  systemHealth: null,
 
   addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
 
@@ -167,6 +170,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ notes: parsedNotes });
     } catch (error) {
       console.error('Failed to load notes', error);
+    }
+  },
+
+  loadHealth: async () => {
+    try {
+      const data = await fetchHealth();
+      set({ systemHealth: data });
+    } catch (error) {
+      console.error('Failed to fetch health status', error);
+      set({ systemHealth: { status: 'error', bigquery: 'disconnected', vertex_ai: 'disconnected' } });
     }
   },
 }));

@@ -6,6 +6,8 @@ from google.api_core.exceptions import GoogleAPIError
 
 logger = logging.getLogger(__name__)
 
+bq_status = "disconnected"
+
 # Initialize BigQuery Client
 try:
     client = bigquery.Client(project=settings.PROJECT_ID)
@@ -17,6 +19,7 @@ except Exception as e:
 
 def _ensure_tables_exist():
     """Ensure that necessary tables exist in BigQuery."""
+    global bq_status
     if not client:
         return
 
@@ -58,6 +61,7 @@ def _ensure_tables_exist():
         ]
         event_table = bigquery.Table(f"{dataset_id}.events", schema=event_schema)
         client.create_table(event_table, exists_ok=True)
+        bq_status = "connected"
     except Exception as e:
         # Simplify error output if running locally without GCP configured
         if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
@@ -67,6 +71,10 @@ def _ensure_tables_exist():
 
 # Call it safely
 _ensure_tables_exist()
+
+def get_connection_status() -> str:
+    """Returns the connection status of BigQuery."""
+    return bq_status
 
 def insert_task(user_id: str, task_name: str, deadline: str = None) -> bool:
     if not client:

@@ -7,14 +7,15 @@ import Link from "next/link";
 import clsx from "clsx";
 
 export default function Home() {
-  const { tasks, notes, loadTasks, loadNotes } = useAppStore();
+  const { tasks, notes, systemHealth, loadTasks, loadNotes, loadHealth } = useAppStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     loadTasks();
     loadNotes();
+    loadHealth();
     setMounted(true);
-  }, [loadTasks, loadNotes]);
+  }, [loadTasks, loadNotes, loadHealth]);
 
   if (!mounted) return null;
 
@@ -64,18 +65,31 @@ export default function Home() {
           </div>
         </Link>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow dark:bg-zinc-900 dark:border-zinc-800">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow dark:bg-zinc-900 dark:border-zinc-800 flex flex-col justify-between">
           <div className="flex items-center gap-4 mb-4">
             <div className="p-3 bg-purple-50 text-purple-600 rounded-xl dark:bg-purple-900/30 dark:text-purple-400">
               <Activity className="w-6 h-6" />
             </div>
             <div>
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">System Status</h3>
-              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">Online</p>
+              <p className={clsx("text-lg font-bold", systemHealth?.status === 'ok' ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400")}>
+                 {systemHealth?.status === 'ok' ? 'Online' : 'Degraded / Error'}
+              </p>
             </div>
           </div>
-          <div className="text-sm text-gray-500 mt-2">
-            All agents operational
+          <div className="text-xs text-gray-500 flex flex-col gap-1.5 mt-2">
+             <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg dark:bg-zinc-800">
+               <span>BigQuery (Tasks/Notes):</span>
+               <span className={clsx("font-medium px-2 py-0.5 rounded-full text-[10px] uppercase", systemHealth?.bigquery === 'connected' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
+                 {systemHealth?.bigquery || 'checking...'}
+               </span>
+             </div>
+             <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg dark:bg-zinc-800">
+               <span>Vertex AI (Agents):</span>
+               <span className={clsx("font-medium px-2 py-0.5 rounded-full text-[10px] uppercase", systemHealth?.vertex_ai === 'connected' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
+                 {systemHealth?.vertex_ai || 'checking...'}
+               </span>
+             </div>
           </div>
         </div>
       </div>

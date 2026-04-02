@@ -15,6 +15,28 @@ except Exception as e:
     # Fallback to avoid breaking tests if GCP is not properly configured
     model = None
 
+vertex_status = "unknown"
+
+def get_connection_status() -> str:
+    """Returns the connection status of Vertex AI."""
+    global vertex_status
+    if vertex_status != "unknown":
+        return vertex_status
+
+    if not model:
+        vertex_status = "disconnected"
+        return vertex_status
+
+    try:
+        # Minimal ping to check if API is enabled and responding
+        model.generate_content("ping")
+        vertex_status = "connected"
+    except Exception as e:
+        logger.warning(f"Vertex AI connection check failed: {e}")
+        vertex_status = "disconnected"
+
+    return vertex_status
+
 def generate_text(prompt: str) -> str:
     """
     Generates text using the Gemini 1.5 Flash model on Vertex AI.
