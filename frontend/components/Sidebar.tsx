@@ -16,7 +16,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 border-r border-gray-200 bg-white h-screen flex flex-col pt-8 dark:bg-zinc-900 dark:border-zinc-800">
+    <aside className="w-64 border-r border-gray-200 bg-white h-screen flex flex-col pt-8 dark:bg-zinc-900 dark:border-zinc-800" suppressHydrationWarning>
       <div className="px-6 pb-6">
         <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
           AI Ops Manager
