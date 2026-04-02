@@ -24,13 +24,24 @@ def summarize_and_extract(text: str) -> dict:
     # Strip markdown block formatting if present
     if response.startswith("```json"):
         response = response.replace("```json", "", 1).replace("```", "")
+    elif response.startswith("```"):
+        response = response.replace("```", "", 1).replace("```", "")
 
     try:
         data = json.loads(response.strip())
         summary = data.get("summary", "")
+        if not isinstance(summary, str):
+            summary = str(summary)
+
         action_items = data.get("action_items", [])
+        if not isinstance(action_items, list):
+            action_items = []
+
     except json.JSONDecodeError:
-        summary = "Error parsing notes"
+        summary = "Could not parse summary from LLM response. The raw response was: " + response[:100] + "..."
+        action_items = []
+    except Exception as e:
+        summary = f"Unexpected error during parsing: {e}"
         action_items = []
 
     return {"summary": summary, "action_items": action_items}

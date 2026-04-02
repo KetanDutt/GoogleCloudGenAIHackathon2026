@@ -1,12 +1,12 @@
 "use client";
 
 import { useAppStore } from "@/store/useAppStore";
-import { User, Server, Database, Bot, Cog } from "lucide-react";
-import { motion } from "framer-motion";
+import { User, Server, Database, Bot, Cog, Activity } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 
 export default function WorkflowVisualizer() {
-  const { workflowStep, activeAgent } = useAppStore();
+  const { workflowStep, activeAgent, agentTrace } = useAppStore();
 
   const steps = [
     { id: "idle", label: "User Input", icon: User },
@@ -78,6 +78,39 @@ export default function WorkflowVisualizer() {
           );
         })}
       </div>
+
+      {agentTrace && agentTrace.length > 0 && (
+        <div className="mt-24 w-full">
+           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2 dark:text-gray-400">
+             <Activity className="w-4 h-4" /> Execution Trace
+           </h4>
+           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 max-h-48 overflow-y-auto custom-scrollbar dark:bg-zinc-950/50 dark:border-zinc-800">
+              <AnimatePresence>
+                {agentTrace.map((trace, idx) => (
+                   <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="flex items-start gap-3 mb-3 last:mb-0"
+                   >
+                     <span className="text-[10px] font-mono text-gray-400 mt-1 whitespace-nowrap">
+                        [{String(idx + 1).padStart(2, '0')}]
+                     </span>
+                     <div>
+                       <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mr-2">
+                         {trace.step}
+                       </span>
+                       <span className="text-xs text-gray-600 dark:text-gray-300">
+                         {trace.details}
+                       </span>
+                     </div>
+                   </motion.div>
+                ))}
+              </AnimatePresence>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

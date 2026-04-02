@@ -45,7 +45,7 @@ export default function NotesPanel() {
             >
               <div className="flex items-start justify-between mb-3">
                 <span className="text-xs text-gray-500 font-medium bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full dark:bg-emerald-900/50 dark:text-emerald-300">
-                  {new Date(note.created_at || "").toLocaleDateString()}
+                  {note.created_at && !isNaN(new Date(note.created_at).getTime()) ? new Date(note.created_at).toLocaleDateString() : "Unknown Date"}
                 </span>
               </div>
 

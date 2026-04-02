@@ -26,6 +26,13 @@ export interface Message {
   content: string;
   timestamp: string;
   intent?: string;
+  isError?: boolean;
+  lastUserMessage?: string;
+}
+
+export interface AgentTraceStep {
+  step: string;
+  details: string;
 }
 
 interface AppState {
@@ -35,6 +42,7 @@ interface AppState {
   isLoading: boolean;
   activeAgent: string | null;
   workflowStep: 'idle' | 'orchestrating' | 'processing' | 'saving' | 'done';
+  agentTrace: AgentTraceStep[];
   addMessage: (msg: Message) => void;
   sendMessage: (text: string) => Promise<void>;
   loadTasks: () => Promise<void>;
@@ -49,6 +57,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isLoading: false,
   activeAgent: null,
   workflowStep: 'idle',
+  agentTrace: [],
 
   addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
 
@@ -60,23 +69,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       timestamp: new Date().toISOString(),
     };
     get().addMessage(userMsg);
-    set({ isLoading: true, workflowStep: 'orchestrating', activeAgent: 'Orchestrator' });
+    set({ isLoading: true, workflowStep: 'orchestrating', activeAgent: 'Orchestrator', agentTrace: [] });
 
     try {
-      // Simulate orchestrator thinking for visualization
-      await new Promise(r => setTimeout(r, 800));
-
       const response = await sendChatRequest(text);
 
       const intent = response.intent;
-      set({ activeAgent: intent.charAt(0).toUpperCase() + intent.slice(1), workflowStep: 'processing' });
+      const trace = response.trace || [];
 
-      // Simulate processing time
-      await new Promise(r => setTimeout(r, 1000));
-
-      set({ workflowStep: 'saving' });
-      // Simulate saving DB time
-      await new Promise(r => setTimeout(r, 600));
+      set({
+          activeAgent: intent.charAt(0).toUpperCase() + intent.slice(1),
+          workflowStep: 'done',
+          agentTrace: trace
+      });
 
       let contentStr = '';
       if (typeof response.response === 'object') {
@@ -94,7 +99,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       };
 
       get().addMessage(aiMsg);
-      set({ workflowStep: 'done', isLoading: false, activeAgent: null });
+      set({ isLoading: false, activeAgent: null });
 
       // Refresh data
       if (intent === 'planner' || intent === 'calendar') {
@@ -114,9 +119,12 @@ export const useAppStore = create<AppState>((set, get) => ({
         role: 'ai',
         content: `Error: ${errorMessage}`,
         timestamp: new Date().toISOString(),
+        isError: true,
+        lastUserMessage: text,
       };
       get().addMessage(errorMsg);
       set({ isLoading: false, workflowStep: 'idle', activeAgent: null });
+      toast.error('Failed to process message');
     }
   },
 
