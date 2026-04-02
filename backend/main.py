@@ -37,23 +37,28 @@ async def handle_request(request: ChatRequest) -> ChatResponse:
     user_input = request.user_input
     user_id = request.user_id
 
+    trace = [{"step": "User Input", "details": user_input}]
     # 1. Orchestrate
     intent = await asyncio.to_thread(route_user_input, user_input)
+    trace.append({"step": "Orchestrator", "details": f"Routed to {intent} agent"})
     response_data = {}
 
     try:
         if intent == "planner":
             # Generate tasks
+            trace.append({"step": "Agent Processing", "details": "Planner agent generating tasks..."})
             tasks = await asyncio.to_thread(generate_tasks, user_input)
             scheduled_tasks = []
 
             for task_name in tasks:
                 # Schedule each task via calendar agent
+                trace.append({"step": "Agent Processing", "details": f"Calendar agent scheduling task: {task_name}"})
                 time_suggestion = await asyncio.to_thread(schedule_task, task_name)
                 start_time = time_suggestion.get("start_time")
                 end_time = time_suggestion.get("end_time")
 
                 # Store in BigQuery
+                trace.append({"step": "Tool Execution", "details": "Adding task and event to database"})
                 await asyncio.to_thread(add_task, user_id, task_name, start_time)
                 await asyncio.to_thread(schedule_event, user_id, task_name, start_time, end_time)
 
@@ -63,10 +68,12 @@ async def handle_request(request: ChatRequest) -> ChatResponse:
                     "scheduled_end": end_time
                 })
 
+            trace.append({"step": "Database Sync", "details": f"Saved {len(scheduled_tasks)} scheduled tasks"})
             response_data = {"tasks_created": scheduled_tasks}
 
         elif intent == "notes":
             # Summarize and extract
+            trace.append({"step": "Agent Processing", "details": "Notes agent summarizing and extracting action items..."})
             extracted = await asyncio.to_thread(summarize_and_extract, user_input)
             summary = extracted.get("summary")
             action_items = extracted.get("action_items", [])
@@ -74,7 +81,9 @@ async def handle_request(request: ChatRequest) -> ChatResponse:
             action_items_str = json.dumps(action_items)
 
             # Save notes
+            trace.append({"step": "Tool Execution", "details": "Saving note to database"})
             await asyncio.to_thread(save_note, user_id, user_input, summary, action_items_str)
+            trace.append({"step": "Database Sync", "details": "Note saved successfully"})
 
             response_data = {
                 "summary": summary,
@@ -83,11 +92,14 @@ async def handle_request(request: ChatRequest) -> ChatResponse:
 
         elif intent == "calendar":
             # Schedule a single event
+            trace.append({"step": "Agent Processing", "details": "Calendar agent suggesting times..."})
             time_suggestion = await asyncio.to_thread(schedule_task, user_input)
             start_time = time_suggestion.get("start_time")
             end_time = time_suggestion.get("end_time")
 
+            trace.append({"step": "Tool Execution", "details": "Saving event to database"})
             await asyncio.to_thread(schedule_event, user_id, user_input, start_time, end_time)
+            trace.append({"step": "Database Sync", "details": "Event saved successfully"})
 
             response_data = {
                 "event_scheduled": user_input,
@@ -96,7 +108,9 @@ async def handle_request(request: ChatRequest) -> ChatResponse:
             }
 
         elif intent == "reminder":
+            trace.append({"step": "Agent Processing", "details": "Reminder agent assessing urgency..."})
             urgency_data = await asyncio.to_thread(assess_urgency, user_input)
+            trace.append({"step": "Database Sync", "details": "No database actions needed for reminders."})
             response_data = {
                 "reminder_set_for": user_input,
                 "urgency": urgency_data.get("urgency_level"),
@@ -104,12 +118,13 @@ async def handle_request(request: ChatRequest) -> ChatResponse:
             }
         else:
             intent = "unknown"
+            trace.append({"step": "Orchestrator", "details": "Could not classify intent."})
             response_data = {"message": "Could not determine intent."}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return ChatResponse(intent=intent, response=response_data)
+    return ChatResponse(intent=intent, response=response_data, trace=trace)
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):

@@ -1,4 +1,5 @@
 import ChatWindow from "@/components/ChatWindow";
+import WorkflowVisualizer from "@/components/WorkflowVisualizer";
 
 export default function ChatPage() {
   return (
@@ -8,7 +9,11 @@ export default function ChatPage() {
         <p className="text-gray-500 mt-2">Interact with your personal operations manager directly.</p>
       </header>
 
-      <section className="h-[750px]">
+      <section className="mb-8">
+        <WorkflowVisualizer />
+      </section>
+
+      <section className="h-[600px]">
         <ChatWindow />
       </section>
     </>

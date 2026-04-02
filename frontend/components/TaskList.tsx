@@ -79,7 +79,7 @@ export default function TaskList() {
                       {task.task_name}
                     </h3>
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                      {task.deadline && (
+                      {task.deadline && !isNaN(new Date(task.deadline).getTime()) && (
                         <span className={clsx(
                           "flex items-center gap-1 px-2 py-1 rounded-md",
                           isCompleted ? "bg-transparent text-gray-400" : "bg-gray-100 dark:bg-zinc-700"
@@ -88,7 +88,7 @@ export default function TaskList() {
                           Deadline: {new Date(task.deadline).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                         </span>
                       )}
-                      {task.created_at && (
+                      {task.created_at && !isNaN(new Date(task.created_at).getTime()) && (
                         <span className="flex items-center gap-1 opacity-70">
                           Created: {new Date(task.created_at).toLocaleDateString()}
                         </span>

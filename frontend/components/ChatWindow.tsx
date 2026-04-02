@@ -10,8 +10,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-export function MessageBubble({ role, content, timestamp, intent }: { role: string; content: string; timestamp: string; intent?: string }) {
+import toast from 'react-hot-toast';
+import { Copy, AlertCircle, RefreshCw } from 'lucide-react';
+
+export function MessageBubble({ role, content, timestamp, intent, isError, onRetry }: { role: string; content: string; timestamp: string; intent?: string, isError?: boolean, onRetry?: () => void }) {
   const isUser = role === "user";
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(content);
+    toast.success("Copied to clipboard");
+  };
 
   return (
     <motion.div
@@ -19,19 +27,21 @@ export function MessageBubble({ role, content, timestamp, intent }: { role: stri
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.3 }}
-      className={clsx("flex w-full mt-4 space-x-3 max-w-2xl", isUser ? "ml-auto justify-end" : "")}
+      className={clsx("flex w-full mt-4 space-x-3 max-w-2xl group", isUser ? "ml-auto justify-end" : "")}
     >
       {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center dark:bg-indigo-900">
-          <Bot className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />
+        <div className={clsx("flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center", isError ? "bg-red-100 dark:bg-red-900" : "bg-indigo-100 dark:bg-indigo-900")}>
+          {isError ? <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-300" /> : <Bot className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />}
         </div>
       )}
       <div>
         <div
           className={clsx(
-            "p-3 rounded-2xl text-sm shadow-sm prose prose-sm max-w-none dark:prose-invert",
+            "p-3 rounded-2xl text-sm shadow-sm prose prose-sm max-w-none dark:prose-invert relative",
             isUser
               ? "bg-blue-600 text-white rounded-tr-sm prose-p:text-white prose-a:text-white"
+              : isError
+              ? "bg-red-50 border border-red-200 text-red-800 rounded-tl-sm dark:bg-red-900/20 dark:border-red-800/50 dark:text-red-200"
               : "bg-white border border-gray-100 text-gray-800 rounded-tl-sm dark:bg-zinc-800 dark:border-zinc-700 dark:text-gray-100"
           )}
         >
@@ -45,6 +55,18 @@ export function MessageBubble({ role, content, timestamp, intent }: { role: stri
             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
               {intent} agent
             </span>
+          )}
+          {!isUser && (
+             <div className="flex gap-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+               <button onClick={handleCopy} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Copy response">
+                  <Copy className="w-3.5 h-3.5" />
+               </button>
+               {isError && onRetry && (
+                 <button onClick={onRetry} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Retry">
+                    <RefreshCw className="w-3.5 h-3.5" />
+                 </button>
+               )}
+             </div>
           )}
         </div>
       </div>
@@ -111,8 +133,8 @@ export default function ChatWindow() {
               </div>
             </div>
           ) : (
-            messages.map((msg: { id: string; role: string; content: string; timestamp: string; intent?: string }) => (
-              <MessageBubble key={msg.id} {...msg} />
+            messages.map((msg: { id: string; role: string; content: string; timestamp: string; intent?: string, isError?: boolean, lastUserMessage?: string }) => (
+              <MessageBubble key={msg.id} {...msg} onRetry={msg.isError && msg.lastUserMessage ? () => sendMessage(msg.lastUserMessage as string) : undefined} />
             ))
           )}
         </AnimatePresence>

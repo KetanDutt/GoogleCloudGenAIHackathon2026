@@ -18,14 +18,19 @@ def generate_tasks(goal: str) -> list[str]:
 
     # Extract bullet points
     tasks = []
-    for line in response.split('\n'):
-        line = line.strip()
-        if line.startswith('-') or line.startswith('*'):
-            tasks.append(re.sub(r'^[-\*]\s*', '', line))
+    try:
+        for line in response.split('\n'):
+            line = line.strip()
+            if line.startswith('-') or line.startswith('*'):
+                tasks.append(re.sub(r'^[-\*]\s*', '', line))
 
-    # Fallback if parsing fails but response exists
-    if not tasks and response:
-        # Split by new lines if the model ignored bullets
-        tasks = [t.strip() for t in response.split('\n') if t.strip()]
+        # Fallback if parsing fails but response exists
+        if not tasks and response:
+            # Split by new lines if the model ignored bullets
+            tasks = [t.strip() for t in response.split('\n') if t.strip()]
+    except Exception as e:
+        print(f"Error parsing planner response: {e}")
+        # Return a safe fallback task if parsing completely fails
+        tasks = [f"Complete goal: {goal}"]
 
     return tasks

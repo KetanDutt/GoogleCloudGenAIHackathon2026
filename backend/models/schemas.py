@@ -5,9 +5,14 @@ class ChatRequest(BaseModel):
     user_input: str
     user_id: str = "default_user"
 
+class AgentTraceStep(BaseModel):
+    step: str
+    details: str
+
 class ChatResponse(BaseModel):
     intent: str
     response: Any
+    trace: Optional[List[AgentTraceStep]] = None
 
 class Task(BaseModel):
     id: Optional[str] = None
