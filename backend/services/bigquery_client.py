@@ -59,7 +59,11 @@ def _ensure_tables_exist():
         event_table = bigquery.Table(f"{dataset_id}.events", schema=event_schema)
         client.create_table(event_table, exists_ok=True)
     except Exception as e:
-        logger.error(f"Error ensuring tables exist: {e}")
+        # Simplify error output if running locally without GCP configured
+        if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
+            logger.warning("BigQuery is not enabled or configured for this project. Running in mock mode.")
+        else:
+            logger.error(f"Error ensuring tables exist: {e}")
 
 # Call it safely
 _ensure_tables_exist()
@@ -101,6 +105,9 @@ def get_tasks(user_id: str) -> List[Dict[str, Any]]:
         results = query_job.result()
         return [dict(row) for row in results]
     except Exception as e:
+        if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
+            # Suppress noisy expected local error
+            return []
         logger.error(f"Failed to get tasks: {e}")
         return []
 
@@ -169,6 +176,9 @@ def get_notes(user_id: str) -> List[Dict[str, Any]]:
         results = query_job.result()
         return [dict(row) for row in results]
     except Exception as e:
+        if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
+             # Suppress noisy expected local error
+             return []
         logger.error(f"Failed to get notes: {e}")
         return []
 
