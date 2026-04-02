@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-gray-50 flex h-screen overflow-hidden text-gray-900 dark:bg-zinc-950 dark:text-gray-100`}>
         <Sidebar />
         <main className="flex-1 h-full overflow-y-auto custom-scrollbar">
