@@ -27,5 +27,8 @@ def generate_text(prompt: str) -> str:
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
+        if "SERVICE_DISABLED" in str(e) or "has not been used in project" in str(e):
+             logger.warning("Vertex AI is not enabled for this project. Returning mock fallback.")
+             return f"[Mock VertexAI Fallback] Attempted to process: {prompt[:50]}..."
         logger.error(f"Error calling Vertex AI: {e}")
         return ""
