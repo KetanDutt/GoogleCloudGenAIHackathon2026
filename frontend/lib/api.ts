@@ -52,3 +52,8 @@ export const completeTaskAPI = async (taskName: string, userId: string = "defaul
   const response = await api.put('/tasks/complete', { user_id: userId, task_name: taskName });
   return response.data;
 };
+
+export const fetchHealth = async () => {
+  const response = await api.get('/health');
+  return response.data;
+};

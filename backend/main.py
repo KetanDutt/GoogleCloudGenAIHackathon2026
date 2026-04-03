@@ -16,6 +16,9 @@ from tools.notes_tools import save_note, fetch_notes
 from tools.calendar_tools import schedule_event
 from fastapi.middleware.cors import CORSMiddleware
 
+from services.bigquery_client import get_connection_status as get_bq_status
+from services.vertex_client import get_connection_status as get_vertex_status
+
 app = FastAPI(
     title="AI Personal Operations Manager",
     description="Multi-Agent System for Managing Tasks, Notes, and Calendars",
@@ -154,4 +157,10 @@ async def get_notes_endpoint(user_id: str = "default_user"):
 @app.get("/health")
 async def health_check():
     """Health check for deployment."""
-    return {"status": "ok"}
+    bq_status = await asyncio.to_thread(get_bq_status)
+    vertex_status = await asyncio.to_thread(get_vertex_status)
+    return {
+        "status": "ok",
+        "bigquery": bq_status,
+        "vertex_ai": vertex_status
+    }
