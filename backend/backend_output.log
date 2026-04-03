@@ -1,15 +1,25 @@
 Failed to initialize BigQuery client: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
 /app/backend/venv/lib/python3.12/site-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
   warning_logs.show_deprecation_warning()
-INFO:     Started server process [513382]
+INFO:     Started server process [632606]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
-Mock get_user_by_email: test4@example.com
-Mock create_user: test4@example.com
-INFO:     127.0.0.1:59988 - "POST /register HTTP/1.1" 200 OK
-Mock get_user_by_email: test4@example.com
-INFO:     127.0.0.1:49940 - "POST /forgot-password HTTP/1.1" 400 Bad Request
-Mock get_user_by_email: test4@example.com
-Mock update_user_password for: test4@example.com
-INFO:     127.0.0.1:43222 - "POST /forgot-password HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49654 - "OPTIONS /register HTTP/1.1" 200 OK
+Mock get_user_by_email: newuser5@example.com
+Mock create_user: newuser5@example.com
+INFO:     127.0.0.1:49656 - "POST /register HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49656 - "OPTIONS /users/me HTTP/1.1" 200 OK
+Mock get_user_by_email: newuser5@example.com
+INFO:     127.0.0.1:49654 - "GET /users/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49654 - "OPTIONS /tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49656 - "OPTIONS /notes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49658 - "OPTIONS /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49664 - "OPTIONS /tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49654 - "OPTIONS /notes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49672 - "OPTIONS /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49666 - "GET /tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49656 - "GET /notes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49672 - "GET /tasks HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49666 - "GET /notes HTTP/1.1" 200 OK
+Vertex AI connection check failed: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.

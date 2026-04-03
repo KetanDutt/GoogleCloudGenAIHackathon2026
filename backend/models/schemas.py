@@ -16,6 +16,13 @@ class ChatResponse(BaseModel):
 class UserCreate(BaseModel):
     email: str
     password: str
+    username: str
+    avatar: str
+
+class UserResponse(BaseModel):
+    email: str
+    username: str
+    avatar: str
 
 class UserLogin(BaseModel):
     email: str

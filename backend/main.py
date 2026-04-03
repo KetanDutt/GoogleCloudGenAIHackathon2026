@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from datetime import timedelta
 
-from models.schemas import ChatRequest, ChatResponse, Task, Note, Event, TaskCompleteRequest, UserCreate, UserLogin, ForgotPasswordRequest, TokenResponse
+from models.schemas import ChatRequest, ChatResponse, Task, Note, Event, TaskCompleteRequest, UserCreate, UserLogin, ForgotPasswordRequest, TokenResponse, UserResponse
 from services.auth_service import get_password_hash, verify_password, create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from services.bigquery_client import create_user, get_user_by_email, update_user_password
 from agents.orchestrator import route_user_input
@@ -62,6 +62,17 @@ def is_valid_password(password: str) -> bool:
         return False
     return True
 
+@app.get("/users/me", response_model=UserResponse)
+async def get_current_user_profile(current_user_email: str = Depends(get_current_user_email)):
+    db_user = await asyncio.to_thread(get_user_by_email, current_user_email)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {
+        "email": db_user["email"],
+        "username": db_user.get("username", db_user["email"].split("@")[0]),
+        "avatar": db_user.get("avatar", "1")
+    }
+
 @app.post("/register", response_model=TokenResponse)
 async def register(user: UserCreate):
     if not is_valid_password(user.password):
@@ -75,7 +86,7 @@ async def register(user: UserCreate):
         raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_password = get_password_hash(user.password)
-    success = await asyncio.to_thread(create_user, user.email, hashed_password)
+    success = await asyncio.to_thread(create_user, user.email, hashed_password, user.username, user.avatar)
 
     if not success:
         raise HTTPException(status_code=500, detail="Failed to create user")

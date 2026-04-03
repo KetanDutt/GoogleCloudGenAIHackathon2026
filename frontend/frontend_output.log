@@ -24,3 +24,10 @@
  ✓ Compiled in 482ms (349 modules)
  ✓ Compiled in 1522ms (746 modules)
  ✓ Compiled in 540ms (349 modules)
+ ✓ Compiled in 1861ms (746 modules)
+ ✓ Compiled in 2.2s (746 modules)
+ ✓ Compiled in 812ms (760 modules)
+ ✓ Compiled in 694ms (760 modules)
+ GET /register 200 in 334ms
+ ○ Compiling / ...
+ ✓ Compiled / in 872ms (418 modules)

@@ -49,8 +49,13 @@ export const loginAPI = async (email: string, password: string) => {
   return response.data;
 };
 
-export const registerAPI = async (email: string, password: string) => {
-  const response = await api.post('/register', { email, password });
+export const fetchUserMeAPI = async () => {
+  const response = await api.get('/users/me');
+  return response.data;
+};
+
+export const registerAPI = async (email: string, password: string, username: string, avatar: string) => {
+  const response = await api.post('/register', { email, password, username, avatar });
   return response.data;
 };
 

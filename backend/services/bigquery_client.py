@@ -66,6 +66,8 @@ def _ensure_tables_exist():
         user_schema = [
             bigquery.SchemaField("email", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("hashed_password", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("username", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("avatar", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE", default_value_expression="CURRENT_TIMESTAMP()"),
         ]
         user_table = bigquery.Table(f"{dataset_id}.users", schema=user_schema)
@@ -224,13 +226,18 @@ def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bo
 # In-memory store for mock users when BigQuery is not available
 MOCK_USERS = {}
 
-def create_user(email: str, hashed_password: str) -> bool:
+def create_user(email: str, hashed_password: str, username: str, avatar: str) -> bool:
     """Inserts a new user into BigQuery. Returns True if successful, False if email already exists or error."""
     if not client:
         logger.warning(f"Mock create_user: {email}")
         if email in MOCK_USERS:
             return False
-        MOCK_USERS[email] = {"email": email, "hashed_password": hashed_password}
+        MOCK_USERS[email] = {
+            "email": email,
+            "hashed_password": hashed_password,
+            "username": username,
+            "avatar": avatar
+        }
         return True
 
     # Check if user already exists
@@ -240,13 +247,15 @@ def create_user(email: str, hashed_password: str) -> bool:
 
     # Use DML INSERT to ensure it's immediately available
     query = f"""
-        INSERT INTO `{dataset_id}.users` (email, hashed_password)
-        VALUES (@email, @hashed_password)
+        INSERT INTO `{dataset_id}.users` (email, hashed_password, username, avatar)
+        VALUES (@email, @hashed_password, @username, @avatar)
     """
     job_config = bigquery.QueryJobConfig(
         query_parameters=[
             bigquery.ScalarQueryParameter("email", "STRING", email),
             bigquery.ScalarQueryParameter("hashed_password", "STRING", hashed_password),
+            bigquery.ScalarQueryParameter("username", "STRING", username),
+            bigquery.ScalarQueryParameter("avatar", "STRING", avatar),
         ]
     )
 

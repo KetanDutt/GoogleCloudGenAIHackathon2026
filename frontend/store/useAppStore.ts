@@ -1,6 +1,12 @@
 import { create } from 'zustand';
-import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI, fetchHealth } from '../lib/api';
+import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI, fetchHealth, fetchUserMeAPI } from '../lib/api';
 import toast from 'react-hot-toast';
+
+export interface User {
+  email: string;
+  username: string;
+  avatar: string;
+}
 
 export interface Task {
   id?: string;
@@ -37,6 +43,7 @@ export interface AgentTraceStep {
 
 interface AppState {
   token: string | null;
+  user: User | null;
   messages: Message[];
   tasks: Task[];
   notes: Note[];
@@ -46,6 +53,7 @@ interface AppState {
   agentTrace: AgentTraceStep[];
   systemHealth: { status: string; bigquery: string; vertex_ai: string } | null;
   setToken: (token: string | null) => void;
+  loadUser: () => Promise<void>;
   logout: () => void;
   addMessage: (msg: Message) => void;
   sendMessage: (text: string) => Promise<void>;
@@ -57,6 +65,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
+  user: null,
   messages: [],
   tasks: [],
   notes: [],
@@ -69,15 +78,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   setToken: (token) => {
     if (token) {
       localStorage.setItem('token', token);
+      set({ token });
+      get().loadUser();
     } else {
       localStorage.removeItem('token');
+      set({ token, user: null });
     }
-    set({ token });
+  },
+
+  loadUser: async () => {
+    try {
+      const user = await fetchUserMeAPI();
+      set({ user });
+    } catch (error) {
+      console.error('Failed to load user', error);
+      get().logout();
+    }
   },
 
   logout: () => {
     localStorage.removeItem('token');
-    set({ token: null, messages: [], tasks: [], notes: [] });
+    set({ token: null, user: null, messages: [], tasks: [], notes: [] });
   },
 
   addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),

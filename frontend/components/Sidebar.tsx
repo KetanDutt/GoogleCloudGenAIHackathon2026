@@ -15,10 +15,18 @@ const navItems = [
   { href: "/notes", label: "Notes", icon: StickyNote },
 ];
 
+const AVATARS: Record<string, string> = {
+  "1": "👤",
+  "2": "👩‍💻",
+  "3": "👨‍💻",
+  "4": "🤖",
+  "5": "🦊",
+};
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { token, logout } = useAppStore();
+  const { token, user, logout } = useAppStore();
 
   const handleLogout = () => {
     logout();
@@ -64,6 +72,17 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 mt-auto border-t border-gray-200 dark:border-zinc-800 flex flex-col gap-2">
+        {user && (
+          <div className="flex items-center gap-3 px-3 py-2">
+            <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-lg">
+              {AVATARS[user.avatar] || "👤"}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium dark:text-white truncate">{user.username}</p>
+              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+            </div>
+          </div>
+        )}
         {token && (
           <button
             onClick={handleLogout}
