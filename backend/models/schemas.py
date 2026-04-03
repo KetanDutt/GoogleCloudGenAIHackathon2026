@@ -3,7 +3,6 @@ from typing import Optional, List, Dict, Any
 
 class ChatRequest(BaseModel):
     user_input: str
-    user_id: str = "default_user"
 
 class AgentTraceStep(BaseModel):
     step: str
@@ -39,7 +38,6 @@ class Task(BaseModel):
     created_at: Optional[str] = None
 
 class TaskCompleteRequest(BaseModel):
-    user_id: str = "default_user"
     task_name: str
 
 class Note(BaseModel):

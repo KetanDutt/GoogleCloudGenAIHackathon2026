@@ -6,9 +6,7 @@ from config.settings import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Using a hardcoded secret key for simplicity in this task.
-# In a real-world scenario, this should be in the environment variables.
-SECRET_KEY = "your-secret-key-replace-me"
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 1 week
 

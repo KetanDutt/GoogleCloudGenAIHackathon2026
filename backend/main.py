@@ -49,8 +49,27 @@ def get_current_user_email(token: str = Depends(oauth2_scheme)):
         )
     return payload["sub"]
 
+import re
+
+def is_valid_password(password: str) -> bool:
+    if len(password) < 8 or len(password) > 16:
+        return False
+    if not re.search(r"\d", password):
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        return False
+    return True
+
 @app.post("/register", response_model=TokenResponse)
 async def register(user: UserCreate):
+    if not is_valid_password(user.password):
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be 8-16 characters and contain a number, a capital letter, and a special character."
+        )
+
     existing_user = await asyncio.to_thread(get_user_by_email, user.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -85,9 +104,19 @@ async def login(user: UserLogin):
 
 @app.post("/forgot-password")
 async def forgot_password(request: ForgotPasswordRequest):
+    # Security Note: In a real production system, this endpoint should NOT directly reset the password.
+    # It should instead generate a secure reset token, email it to the user, and require that token
+    # to be provided in a separate /reset-password endpoint.
+    # For this mock implementation without email capabilities, we allow it to proceed directly.
     db_user = await asyncio.to_thread(get_user_by_email, request.email)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if not is_valid_password(request.new_password):
+        raise HTTPException(
+            status_code=400,
+            detail="New password must be 8-16 characters and contain a number, a capital letter, and a special character."
+        )
 
     hashed_password = get_password_hash(request.new_password)
     success = await asyncio.to_thread(update_user_password, request.email, hashed_password)

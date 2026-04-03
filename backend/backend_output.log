@@ -1,35 +1,15 @@
 Failed to initialize BigQuery client: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
 /app/backend/venv/lib/python3.12/site-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
   warning_logs.show_deprecation_warning()
-INFO:     Started server process [212984]
+INFO:     Started server process [513382]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
-Mock get_user_by_email: test@example.com
-Mock create_user: test@example.com
-/app/backend/venv/lib/python3.12/site-packages/jwt/api_jwt.py:147: InsecureKeyLengthWarning: The HMAC key is 26 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
-  return self._jws.encode(
-INFO:     127.0.0.1:60626 - "POST /register HTTP/1.1" 200 OK
-Mock get_user_by_email: test@example.com
-INFO:     127.0.0.1:41102 - "POST /login HTTP/1.1" 200 OK
-Mock get_user_by_email: test@example.com
-Mock update_user_password for: test@example.com
-INFO:     127.0.0.1:59678 - "POST /forgot-password HTTP/1.1" 200 OK
-Mock get_user_by_email: test@example.com
-INFO:     127.0.0.1:43326 - "POST /login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60280 - "OPTIONS /login HTTP/1.1" 200 OK
-Mock get_user_by_email: test@example.com
-INFO:     127.0.0.1:60282 - "POST /login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60282 - "OPTIONS /tasks HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60280 - "OPTIONS /notes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60284 - "OPTIONS /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60290 - "OPTIONS /tasks HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60302 - "OPTIONS /notes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60310 - "OPTIONS /health HTTP/1.1" 200 OK
-/app/backend/venv/lib/python3.12/site-packages/jwt/api_jwt.py:365: InsecureKeyLengthWarning: The HMAC key is 26 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
-  decoded = self.decode_complete(
-INFO:     127.0.0.1:60282 - "GET /tasks HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60280 - "GET /notes HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60310 - "GET /tasks HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60282 - "GET /notes HTTP/1.1" 200 OK
-Vertex AI connection check failed: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
+Mock get_user_by_email: test4@example.com
+Mock create_user: test4@example.com
+INFO:     127.0.0.1:59988 - "POST /register HTTP/1.1" 200 OK
+Mock get_user_by_email: test4@example.com
+INFO:     127.0.0.1:49940 - "POST /forgot-password HTTP/1.1" 400 Bad Request
+Mock get_user_by_email: test4@example.com
+Mock update_user_password for: test4@example.com
+INFO:     127.0.0.1:43222 - "POST /forgot-password HTTP/1.1" 200 OK

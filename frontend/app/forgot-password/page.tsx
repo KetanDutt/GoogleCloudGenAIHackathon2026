@@ -12,8 +12,17 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  const validations = {
+    length: newPassword.length >= 8 && newPassword.length <= 16,
+    number: /\d/.test(newPassword),
+    capital: /[A-Z]/.test(newPassword),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword),
+  };
+  const isPasswordValid = Object.values(validations).every(Boolean);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPasswordValid) return;
     setLoading(true);
     try {
       await forgotPasswordAPI(email, newPassword);
@@ -62,6 +71,20 @@ export default function ForgotPasswordPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
+              <div className="mt-2 text-xs space-y-1">
+                <p className={validations.length ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                  {validations.length ? "✓" : "✗"} 8-16 characters
+                </p>
+                <p className={validations.capital ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                  {validations.capital ? "✓" : "✗"} At least one capital letter
+                </p>
+                <p className={validations.number ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                  {validations.number ? "✓" : "✗"} At least one number
+                </p>
+                <p className={validations.special ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                  {validations.special ? "✓" : "✗"} At least one special character
+                </p>
+              </div>
             </div>
           </div>
 
@@ -76,7 +99,7 @@ export default function ForgotPasswordPage() {
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isPasswordValid}
               className="flex w-full justify-center rounded-md bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
             >
               {loading ? "Resetting..." : "Reset password"}
