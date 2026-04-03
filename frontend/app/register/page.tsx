@@ -22,6 +22,11 @@ export default function RegisterPage() {
     { id: "3", emoji: "👨‍💻" },
     { id: "4", emoji: "🤖" },
     { id: "5", emoji: "🦊" },
+    { id: "6", emoji: "🦄" },
+    { id: "7", emoji: "🐸" },
+    { id: "8", emoji: "🐻" },
+    { id: "9", emoji: "🦖" },
+    { id: "10", emoji: "🐶" },
   ];
 
   const validations = {
@@ -61,7 +66,7 @@ export default function RegisterPage() {
           <div className="space-y-4 rounded-md shadow-sm">
 
             <div className="flex justify-center mb-6">
-              <div className="flex gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 {avatarOptions.map((opt) => (
                   <button
                     key={opt.id}

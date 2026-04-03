@@ -9,12 +9,18 @@ const publicRoutes = ["/login", "/register", "/forgot-password"];
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const token = useAppStore((state) => state.token);
+  const { token, user, loadUser } = useAppStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (token && !user) {
+      loadUser();
+    }
+  }, [token, user, loadUser]);
 
   useEffect(() => {
     if (!mounted) return;

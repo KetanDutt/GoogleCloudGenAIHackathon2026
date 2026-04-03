@@ -31,3 +31,11 @@
  GET /register 200 in 334ms
  ○ Compiling / ...
  ✓ Compiled / in 872ms (418 modules)
+ ✓ Compiled in 2.1s (760 modules)
+ ✓ Compiled in 652ms (760 modules)
+ GET /register 200 in 266ms
+ ✓ Compiled / in 415ms (418 modules)
+ ✓ Compiled in 3.4s (760 modules)
+ GET /register 200 in 265ms
+ ✓ Compiled / in 410ms (418 modules)
+ GET / 200 in 120ms
