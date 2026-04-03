@@ -1,10 +1,14 @@
 import json
 import asyncio
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from typing import List, Dict, Any
+from datetime import timedelta
 
-from models.schemas import ChatRequest, ChatResponse, Task, Note, Event, TaskCompleteRequest
+from models.schemas import ChatRequest, ChatResponse, Task, Note, Event, TaskCompleteRequest, UserCreate, UserLogin, ForgotPasswordRequest, TokenResponse
+from services.auth_service import get_password_hash, verify_password, create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from services.bigquery_client import create_user, get_user_by_email, update_user_password
 from agents.orchestrator import route_user_input
 from agents.planner import generate_tasks
 from agents.calendar import schedule_task
@@ -33,12 +37,72 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-async def handle_request(request: ChatRequest) -> ChatResponse:
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+def get_current_user_email(token: str = Depends(oauth2_scheme)):
+    payload = verify_token(token)
+    if not payload or "sub" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return payload["sub"]
+
+@app.post("/register", response_model=TokenResponse)
+async def register(user: UserCreate):
+    existing_user = await asyncio.to_thread(get_user_by_email, user.email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    hashed_password = get_password_hash(user.password)
+    success = await asyncio.to_thread(create_user, user.email, hashed_password)
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to create user")
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/login", response_model=TokenResponse)
+async def login(user: UserLogin):
+    db_user = await asyncio.to_thread(get_user_by_email, user.email)
+    if not db_user or not verify_password(user.password, db_user["hashed_password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest):
+    db_user = await asyncio.to_thread(get_user_by_email, request.email)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    hashed_password = get_password_hash(request.new_password)
+    success = await asyncio.to_thread(update_user_password, request.email, hashed_password)
+
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update password")
+    return {"message": "Password updated successfully"}
+
+
+async def handle_request(request: ChatRequest, current_user: str) -> ChatResponse:
     """
     Main workflow engine. Routes user input and processes it through specialized agents asynchronously.
     """
     user_input = request.user_input
-    user_id = request.user_id
+    user_id = current_user
 
     trace = [{"step": "User Input", "details": user_input}]
     # 1. Orchestrate
@@ -130,28 +194,28 @@ async def handle_request(request: ChatRequest) -> ChatResponse:
     return ChatResponse(intent=intent, response=response_data, trace=trace)
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest, current_user: str = Depends(get_current_user_email)):
     """Chat endpoint to process user input."""
-    return await handle_request(request)
+    return await handle_request(request, current_user)
 
 @app.get("/tasks", response_model=List[Dict[str, Any]])
-async def get_tasks_endpoint(user_id: str = "default_user"):
+async def get_tasks_endpoint(current_user: str = Depends(get_current_user_email)):
     """Returns user tasks."""
-    tasks = await asyncio.to_thread(list_tasks, user_id)
+    tasks = await asyncio.to_thread(list_tasks, current_user)
     return tasks
 
 @app.put("/tasks/complete")
-async def complete_task_endpoint(request: TaskCompleteRequest):
+async def complete_task_endpoint(request: TaskCompleteRequest, current_user: str = Depends(get_current_user_email)):
     """Marks a user task as complete."""
-    success = await asyncio.to_thread(complete_task_status, request.user_id, request.task_name)
+    success = await asyncio.to_thread(complete_task_status, current_user, request.task_name)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to complete task")
     return {"message": "Task completed successfully"}
 
 @app.get("/notes", response_model=List[Dict[str, Any]])
-async def get_notes_endpoint(user_id: str = "default_user"):
+async def get_notes_endpoint(current_user: str = Depends(get_current_user_email)):
     """Returns user notes."""
-    notes = await asyncio.to_thread(fetch_notes, user_id)
+    notes = await asyncio.to_thread(fetch_notes, current_user)
     return notes
 
 @app.get("/health")

@@ -10,6 +10,17 @@ export const api = axios.create({
   },
 });
 
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Add a response interceptor to catch common API errors globally
 api.interceptors.response.use(
   (response) => response,
@@ -33,23 +44,38 @@ api.interceptors.response.use(
   }
 );
 
-export const sendChatRequest = async (userInput: string, userId: string = "default_user") => {
-  const response = await api.post('/chat', { user_input: userInput, user_id: userId });
+export const loginAPI = async (email: string, password: string) => {
+  const response = await api.post('/login', { email, password });
   return response.data;
 };
 
-export const fetchTasks = async (userId: string = "default_user") => {
-  const response = await api.get(`/tasks?user_id=${userId}`);
+export const registerAPI = async (email: string, password: string) => {
+  const response = await api.post('/register', { email, password });
   return response.data;
 };
 
-export const fetchNotes = async (userId: string = "default_user") => {
-  const response = await api.get(`/notes?user_id=${userId}`);
+export const forgotPasswordAPI = async (email: string, new_password: string) => {
+  const response = await api.post('/forgot-password', { email, new_password });
   return response.data;
 };
 
-export const completeTaskAPI = async (taskName: string, userId: string = "default_user") => {
-  const response = await api.put('/tasks/complete', { user_id: userId, task_name: taskName });
+export const sendChatRequest = async (userInput: string) => {
+  const response = await api.post('/chat', { user_input: userInput });
+  return response.data;
+};
+
+export const fetchTasks = async () => {
+  const response = await api.get(`/tasks`);
+  return response.data;
+};
+
+export const fetchNotes = async () => {
+  const response = await api.get(`/notes`);
+  return response.data;
+};
+
+export const completeTaskAPI = async (taskName: string) => {
+  const response = await api.put('/tasks/complete', { task_name: taskName });
   return response.data;
 };
 

@@ -1,0 +1,17 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 2.9s
+ ○ Compiling /login ...
+ ✓ Compiled /login in 7.9s (758 modules)
+ GET /login 200 in 8779ms
+ ✓ Compiled in 880ms (342 modules)
+ GET /login 200 in 41ms
+ ○ Compiling / ...
+ ✓ Compiled / in 740ms (747 modules)

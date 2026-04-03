@@ -36,6 +36,7 @@ export interface AgentTraceStep {
 }
 
 interface AppState {
+  token: string | null;
   messages: Message[];
   tasks: Task[];
   notes: Note[];
@@ -44,6 +45,8 @@ interface AppState {
   workflowStep: 'idle' | 'orchestrating' | 'processing' | 'saving' | 'done';
   agentTrace: AgentTraceStep[];
   systemHealth: { status: string; bigquery: string; vertex_ai: string } | null;
+  setToken: (token: string | null) => void;
+  logout: () => void;
   addMessage: (msg: Message) => void;
   sendMessage: (text: string) => Promise<void>;
   loadTasks: () => Promise<void>;
@@ -53,6 +56,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
+  token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
   messages: [],
   tasks: [],
   notes: [],
@@ -61,6 +65,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   workflowStep: 'idle',
   agentTrace: [],
   systemHealth: null,
+
+  setToken: (token) => {
+    if (token) {
+      localStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+    }
+    set({ token });
+  },
+
+  logout: () => {
+    localStorage.removeItem('token');
+    set({ token: null, messages: [], tasks: [], notes: [] });
+  },
 
   addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
 

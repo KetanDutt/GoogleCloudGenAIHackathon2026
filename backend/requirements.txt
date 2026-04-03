@@ -5,3 +5,6 @@ google-cloud-bigquery
 pydantic
 python-dotenv
 pydantic-settings
+passlib[bcrypt]
+pyjwt
+python-multipart

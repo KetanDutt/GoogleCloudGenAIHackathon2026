@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+import AuthGuard from "@/components/AuthGuard";
 import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -19,12 +20,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-gray-50 flex h-screen overflow-hidden text-gray-900 dark:bg-zinc-950 dark:text-gray-100`}>
-        <Sidebar />
-        <main className="flex-1 h-full overflow-y-auto custom-scrollbar">
-          <div className="p-8 max-w-7xl mx-auto space-y-8">
-            {children}
-          </div>
-        </main>
+        <AuthGuard>
+          <Sidebar />
+          <main className="flex-1 h-full overflow-y-auto custom-scrollbar">
+            <div className="p-8 max-w-7xl mx-auto space-y-8">
+              {children}
+            </div>
+          </main>
+        </AuthGuard>
         <Toaster position="bottom-right" />
       </body>
     </html>

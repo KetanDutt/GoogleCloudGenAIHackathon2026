@@ -14,6 +14,22 @@ class ChatResponse(BaseModel):
     response: Any
     trace: Optional[List[AgentTraceStep]] = None
 
+class UserCreate(BaseModel):
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+
 class Task(BaseModel):
     id: Optional[str] = None
     user_id: str
