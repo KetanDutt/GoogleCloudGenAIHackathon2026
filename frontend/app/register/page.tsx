@@ -1,0 +1,166 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { registerAPI } from "@/lib/api";
+import { useAppStore } from "@/store/useAppStore";
+import toast from "react-hot-toast";
+
+export default function RegisterPage() {
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [avatar, setAvatar] = useState("1");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const setToken = useAppStore((state) => state.setToken);
+
+  const avatarOptions = [
+    { id: "1", emoji: "👤" },
+    { id: "2", emoji: "👩‍💻" },
+    { id: "3", emoji: "👨‍💻" },
+    { id: "4", emoji: "🤖" },
+    { id: "5", emoji: "🦊" },
+    { id: "6", emoji: "🦄" },
+    { id: "7", emoji: "🐸" },
+    { id: "8", emoji: "🐻" },
+    { id: "9", emoji: "🦖" },
+    { id: "10", emoji: "🐶" },
+  ];
+
+  const validations = {
+    length: password.length >= 8 && password.length <= 16,
+    number: /\d/.test(password),
+    capital: /[A-Z]/.test(password),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+  };
+  const isPasswordValid = Object.values(validations).every(Boolean);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isPasswordValid || !username) return;
+
+    setLoading(true);
+    try {
+      const data = await registerAPI(email, password, username, avatar);
+      setToken(data.access_token);
+      toast.success("Account created successfully");
+      router.push("/");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8 bg-white dark:bg-zinc-900 p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+            Create a new account
+          </h2>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-4 rounded-md shadow-sm">
+
+            <div className="flex justify-center mb-6">
+              <div className="grid grid-cols-5 gap-2">
+                {avatarOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setAvatar(opt.id)}
+                    className={`w-12 h-12 text-2xl rounded-full flex items-center justify-center transition-all ${
+                      avatar === opt.id
+                        ? "bg-blue-100 ring-2 ring-blue-500 dark:bg-blue-900/50"
+                        : "bg-gray-50 hover:bg-gray-100 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                    }`}
+                  >
+                    {opt.emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="email-address" className="sr-only">Email address</label>
+              <input
+                id="email-address"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="relative block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="username" className="sr-only">Username</label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                required
+                className="relative block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">Password</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                className="relative block w-full rounded-md border-0 py-2.5 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <div className="mt-2 text-xs space-y-1">
+                <p className={validations.length ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                  {validations.length ? "✓" : "✗"} 8-16 characters
+                </p>
+                <p className={validations.capital ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                  {validations.capital ? "✓" : "✗"} At least one capital letter
+                </p>
+                <p className={validations.number ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                  {validations.number ? "✓" : "✗"} At least one number
+                </p>
+                <p className={validations.special ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                  {validations.special ? "✓" : "✗"} At least one special character
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center">
+            <div className="text-sm">
+              <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                Already have an account? Sign in
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading || !isPasswordValid || !username}
+              className="flex w-full justify-center rounded-md bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
+            >
+              {loading ? "Creating account..." : "Sign up"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

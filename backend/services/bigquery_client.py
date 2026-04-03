@@ -61,6 +61,18 @@ def _ensure_tables_exist():
         ]
         event_table = bigquery.Table(f"{dataset_id}.events", schema=event_schema)
         client.create_table(event_table, exists_ok=True)
+
+        # Schema for users
+        user_schema = [
+            bigquery.SchemaField("email", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("hashed_password", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("username", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("avatar", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE", default_value_expression="CURRENT_TIMESTAMP()"),
+        ]
+        user_table = bigquery.Table(f"{dataset_id}.users", schema=user_schema)
+        client.create_table(user_table, exists_ok=True)
+
         bq_status = "connected"
     except Exception as e:
         # Simplify error output if running locally without GCP configured
@@ -209,4 +221,104 @@ def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bo
         return not errors
     except GoogleAPIError as e:
         logger.error(f"Failed to insert event: {e}")
+        return False
+
+# In-memory store for mock users when BigQuery is not available
+MOCK_USERS = {}
+
+def create_user(email: str, hashed_password: str, username: str, avatar: str) -> bool:
+    """Inserts a new user into BigQuery. Returns True if successful, False if email already exists or error."""
+    if not client:
+        logger.warning(f"Mock create_user: {email}")
+        if email in MOCK_USERS:
+            return False
+        MOCK_USERS[email] = {
+            "email": email,
+            "hashed_password": hashed_password,
+            "username": username,
+            "avatar": avatar
+        }
+        return True
+
+    # Check if user already exists
+    existing_user = get_user_by_email(email)
+    if existing_user:
+        return False
+
+    # Use DML INSERT to ensure it's immediately available
+    query = f"""
+        INSERT INTO `{dataset_id}.users` (email, hashed_password, username, avatar)
+        VALUES (@email, @hashed_password, @username, @avatar)
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("email", "STRING", email),
+            bigquery.ScalarQueryParameter("hashed_password", "STRING", hashed_password),
+            bigquery.ScalarQueryParameter("username", "STRING", username),
+            bigquery.ScalarQueryParameter("avatar", "STRING", avatar),
+        ]
+    )
+
+    try:
+        query_job = client.query(query, job_config=job_config)
+        query_job.result()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to create user: {e}")
+        return False
+
+def get_user_by_email(email: str) -> Dict[str, Any] | None:
+    """Fetches a user by email. Returns None if not found."""
+    if not client:
+        logger.warning(f"Mock get_user_by_email: {email}")
+        return MOCK_USERS.get(email)
+
+    query = f"""
+        SELECT * FROM `{dataset_id}.users`
+        WHERE email = @email
+        LIMIT 1
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("email", "STRING", email)]
+    )
+
+    try:
+        query_job = client.query(query, job_config=job_config)
+        results = list(query_job.result())
+        if results:
+            return dict(results[0])
+        return None
+    except Exception as e:
+        if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
+            return None
+        logger.error(f"Failed to get user by email: {e}")
+        return None
+
+def update_user_password(email: str, new_hashed_password: str) -> bool:
+    """Updates a user's password."""
+    if not client:
+        logger.warning(f"Mock update_user_password for: {email}")
+        if email in MOCK_USERS:
+            MOCK_USERS[email]["hashed_password"] = new_hashed_password
+            return True
+        return False
+
+    query = f"""
+        UPDATE `{dataset_id}.users`
+        SET hashed_password = @hashed_password
+        WHERE email = @email
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("hashed_password", "STRING", new_hashed_password),
+            bigquery.ScalarQueryParameter("email", "STRING", email),
+        ]
+    )
+
+    try:
+        query_job = client.query(query, job_config=job_config)
+        query_job.result()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to update user password: {e}")
         return False
