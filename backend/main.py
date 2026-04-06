@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from datetime import timedelta
 
-from models.schemas import ChatRequest, ChatResponse, Task, Note, Event, TaskCompleteRequest, UserCreate, UserLogin, ForgotPasswordRequest, TokenResponse, UserResponse
+from models.schemas import ChatRequest, ChatResponse, TaskCompleteRequest, UserCreate, UserLogin, ForgotPasswordRequest, TokenResponse, UserResponse
 from services.auth_service import get_password_hash, verify_password, create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from services.bigquery_client import create_user, get_user_by_email, update_user_password
 from agents.orchestrator import route_user_input
