@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from datetime import timedelta
 
-from models.schemas import ChatRequest, ChatResponse, Task, Note, Event, TaskCompleteRequest, UserCreate, UserLogin, ForgotPasswordRequest, TokenResponse, UserResponse
+from models.schemas import ChatRequest, ChatResponse, Task, Note, Event, TaskCompleteRequest, UserCreate, UserLogin, TokenResponse, UserResponse
 from services.auth_service import get_password_hash, verify_password, create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from services.bigquery_client import create_user, get_user_by_email, update_user_password
 from agents.orchestrator import route_user_input
@@ -112,30 +112,6 @@ async def login(user: UserLogin):
         data={"sub": user.email}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
-
-@app.post("/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest):
-    # Security Note: In a real production system, this endpoint should NOT directly reset the password.
-    # It should instead generate a secure reset token, email it to the user, and require that token
-    # to be provided in a separate /reset-password endpoint.
-    # For this mock implementation without email capabilities, we allow it to proceed directly.
-    db_user = await asyncio.to_thread(get_user_by_email, request.email)
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if not is_valid_password(request.new_password):
-        raise HTTPException(
-            status_code=400,
-            detail="New password must be 8-16 characters and contain a number, a capital letter, and a special character."
-        )
-
-    hashed_password = get_password_hash(request.new_password)
-    success = await asyncio.to_thread(update_user_password, request.email, hashed_password)
-
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to update password")
-    return {"message": "Password updated successfully"}
-
 
 async def handle_request(request: ChatRequest, current_user: str) -> ChatResponse:
     """

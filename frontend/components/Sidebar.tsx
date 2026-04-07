@@ -6,7 +6,7 @@ import { MessageSquare, CheckSquare, StickyNote, LayoutDashboard, LogOut } from 
 import clsx from "clsx";
 import { useAppStore } from "@/store/useAppStore";
 
-const publicRoutes = ["/login", "/register", "/forgot-password"];
+const publicRoutes = ["/login", "/register"];
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },

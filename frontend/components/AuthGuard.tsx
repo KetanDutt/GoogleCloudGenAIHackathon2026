@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppStore } from "@/store/useAppStore";
 
-const publicRoutes = ["/login", "/register", "/forgot-password"];
+const publicRoutes = ["/login", "/register"];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
