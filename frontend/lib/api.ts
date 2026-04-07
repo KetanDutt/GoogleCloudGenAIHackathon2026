@@ -59,11 +59,6 @@ export const registerAPI = async (email: string, password: string, username: str
   return response.data;
 };
 
-export const forgotPasswordAPI = async (email: string, new_password: string) => {
-  const response = await api.post('/forgot-password', { email, new_password });
-  return response.data;
-};
-
 export const sendChatRequest = async (userInput: string) => {
   const response = await api.post('/chat', { user_input: userInput });
   return response.data;

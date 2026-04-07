@@ -113,30 +113,6 @@ async def login(user: UserLogin):
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.post("/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest):
-    # Security Note: In a real production system, this endpoint should NOT directly reset the password.
-    # It should instead generate a secure reset token, email it to the user, and require that token
-    # to be provided in a separate /reset-password endpoint.
-    # For this mock implementation without email capabilities, we allow it to proceed directly.
-    db_user = await asyncio.to_thread(get_user_by_email, request.email)
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if not is_valid_password(request.new_password):
-        raise HTTPException(
-            status_code=400,
-            detail="New password must be 8-16 characters and contain a number, a capital letter, and a special character."
-        )
-
-    hashed_password = get_password_hash(request.new_password)
-    success = await asyncio.to_thread(update_user_password, request.email, hashed_password)
-
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to update password")
-    return {"message": "Password updated successfully"}
-
-
 async def handle_request(request: ChatRequest, current_user: str) -> ChatResponse:
     """
     Main workflow engine. Routes user input and processes it through specialized agents asynchronously.
