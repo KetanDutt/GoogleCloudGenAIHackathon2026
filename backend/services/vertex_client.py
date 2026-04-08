@@ -1,6 +1,9 @@
 import vertexai
+import warnings
 from vertexai.generative_models import GenerativeModel
 from config.settings import settings
+
+warnings.filterwarnings('ignore', category=UserWarning, module='vertexai')
 
 import logging
 
@@ -32,8 +35,12 @@ def get_connection_status() -> str:
         model.generate_content("ping")
         vertex_status = "connected"
     except Exception as e:
-        logger.warning(f"Vertex AI connection check failed: {e}")
-        vertex_status = "disconnected"
+        if "429 Resource exhausted" in str(e) or "429 Quota exceeded" in str(e):
+            logger.warning("Vertex AI connection check: Rate limited (429), but connection is successful.")
+            vertex_status = "connected"
+        else:
+            logger.warning(f"Vertex AI connection check failed: {e}")
+            vertex_status = "disconnected"
 
     return vertex_status
 
@@ -72,5 +79,5 @@ def generate_text(prompt: str, model_name: str = "gemini-2.5-flash") -> str:
         if "SERVICE_DISABLED" in str(e) or "has not been used in project" in str(e):
              logger.warning("Vertex AI is not enabled for this project.")
              raise VertexAIError(f"Vertex AI API not enabled: {e}")
-        logger.error(f"Error calling Vertex AI: {e}")
+        logger.error(f"Error calling Vertex AI: {e}", exc_info=True)
         raise VertexAIError(f"Error generating text: {e}")

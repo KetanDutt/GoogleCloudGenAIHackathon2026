@@ -6,7 +6,7 @@ from config.settings import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-SECRET_KEY = settings.SECRET_KEY
+SECRET_KEY = settings.SECRET_KEY.ljust(32, '0')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 1 week
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI, fetchHealth, fetchUserMeAPI, fetchModelsAPI } from '../lib/api';
+import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI, fetchHealth, fetchUserMeAPI, fetchModelsAPI, fetchEvents } from '../lib/api';
 import toast from 'react-hot-toast';
 
 export interface User {
@@ -26,6 +26,15 @@ export interface Note {
   created_at?: string;
 }
 
+export interface Event {
+  id?: string;
+  user_id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  created_at?: string;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'ai';
@@ -47,6 +56,7 @@ interface AppState {
   messages: Message[];
   tasks: Task[];
   notes: Note[];
+  events: Event[];
   isLoading: boolean;
   activeAgent: string | null;
   workflowStep: 'idle' | 'orchestrating' | 'processing' | 'saving' | 'done';
@@ -61,6 +71,7 @@ interface AppState {
   sendMessage: (text: string) => Promise<void>;
   loadTasks: () => Promise<void>;
   loadNotes: () => Promise<void>;
+  loadEvents: () => Promise<void>;
   completeTask: (taskName: string) => Promise<void>;
   loadHealth: () => Promise<void>;
   loadModels: () => Promise<void>;
@@ -73,6 +84,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   messages: [],
   tasks: [],
   notes: [],
+  events: [],
   isLoading: false,
   activeAgent: null,
   workflowStep: 'idle',
@@ -104,7 +116,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   logout: () => {
     localStorage.removeItem('token');
-    set({ token: null, user: null, messages: [], tasks: [], notes: [] });
+    set({ token: null, user: null, messages: [], tasks: [], notes: [], events: [] });
   },
 
   addMessage: (msg) => set((state) => ({ messages: [...state.messages, msg] })),
@@ -152,6 +164,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Refresh data
       if (intent === 'planner' || intent === 'calendar') {
         get().loadTasks();
+        get().loadEvents();
       } else if (intent === 'notes') {
         get().loadNotes();
       }
@@ -215,6 +228,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ notes: parsedNotes });
     } catch (error) {
       console.error('Failed to load notes', error);
+    }
+  },
+
+  loadEvents: async () => {
+    try {
+      const data = await fetchEvents();
+      set({ events: data });
+    } catch (error) {
+      console.error('Failed to load events', error);
     }
   },
 
