@@ -1,5 +1,8 @@
 from services.vertex_client import generate_text
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 def generate_tasks(goal: str) -> list[str]:
     """
@@ -29,7 +32,7 @@ def generate_tasks(goal: str) -> list[str]:
             # Split by new lines if the model ignored bullets
             tasks = [t.strip() for t in response.split('\n') if t.strip()]
     except Exception as e:
-        print(f"Error parsing planner response: {e}")
+        logger.error(f"Error parsing planner response: {e}")
         # Return a safe fallback task if parsing completely fails
         tasks = [f"Complete goal: {goal}"]
 
