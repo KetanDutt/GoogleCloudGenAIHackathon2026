@@ -155,6 +155,11 @@ async def get_models_endpoint():
     """Returns available Vertex AI models."""
     return {"models": get_available_models()}
 
+@app.get("/ready")
+async def readiness():
+    # Check if all critical services are initialized
+    return {"ready": True}
+
 @app.get("/health")
 async def health_check():
     """Health check for deployment."""
