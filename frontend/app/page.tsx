@@ -7,6 +7,12 @@ import Link from "next/link";
 import clsx from "clsx";
 
 const TEST_PROMPTS = [
+  "Add a note: Always review lecture slides before the exam.",
+  "Add a note: Remember to bring extra pencils for the test.",
+  "Add a task: Buy groceries tomorrow.",
+  "Add a task: Finish writing the history paper due next Tuesday.",
+  "Schedule an event: Doctor's appointment on Friday at 10 AM.",
+  "Schedule an event: Group study session on Saturday at 4 PM.",
   "Create a study plan for my final exams next week",
   "Add a study session to my calendar for tomorrow at 2 PM",
   "Save this note: Important study tip is to take breaks every 45 minutes",
@@ -14,16 +20,17 @@ const TEST_PROMPTS = [
 ];
 
 export default function Home() {
-  const { tasks, notes, systemHealth, loadTasks, loadNotes, loadHealth, sendMessage } = useAppStore();
+  const { tasks, notes, events, systemHealth, loadTasks, loadNotes, loadEvents, loadHealth, sendMessage } = useAppStore();
   const [mounted, setMounted] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     loadTasks();
     loadNotes();
+    loadEvents();
     loadHealth();
     setMounted(true);
-  }, [loadTasks, loadNotes, loadHealth]);
+  }, [loadTasks, loadNotes, loadEvents, loadHealth]);
 
   if (!mounted) return null;
 
@@ -146,30 +153,56 @@ export default function Home() {
         </div>
       </div>
 
-      <section>
-        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-indigo-500"/> Recent Tasks
-        </h2>
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden dark:bg-zinc-900 dark:border-zinc-800">
-          {tasks.length === 0 ? (
-             <div className="p-6 text-center text-gray-500">No tasks created yet.</div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-zinc-800">
-              {tasks.slice(0, 5).map(task => (
-                <div key={task.id || task.task_name} className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-zinc-800/50">
-                   <div>
-                     <p className={clsx("font-medium", task.status === 'completed' ? "text-gray-400 line-through" : "text-gray-800 dark:text-gray-200")}>{task.task_name}</p>
-                     {task.deadline && <p className="text-xs text-gray-500 mt-1">Due: {new Date(task.deadline).toLocaleDateString()}</p>}
-                   </div>
-                   <span className={clsx("px-2 py-1 text-xs rounded-full", task.status === 'completed' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400")}>
-                     {task.status || "pending"}
-                   </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section>
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <CheckSquare className="w-5 h-5 text-indigo-500"/> Recent Tasks
+          </h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden dark:bg-zinc-900 dark:border-zinc-800">
+            {tasks.length === 0 ? (
+               <div className="p-6 text-center text-gray-500">No tasks created yet.</div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+                {tasks.slice(0, 5).map(task => (
+                  <div key={task.id || task.task_name} className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-zinc-800/50">
+                     <div>
+                       <p className={clsx("font-medium", task.status === 'completed' ? "text-gray-400 line-through" : "text-gray-800 dark:text-gray-200")}>{task.task_name}</p>
+                       {task.deadline && <p className="text-xs text-gray-500 mt-1">Due: {new Date(task.deadline).toLocaleDateString()}</p>}
+                     </div>
+                     <span className={clsx("px-2 py-1 text-xs rounded-full", task.status === 'completed' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400")}>
+                       {task.status || "pending"}
+                     </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-indigo-500"/> Calendar
+          </h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden dark:bg-zinc-900 dark:border-zinc-800">
+            {events.length === 0 ? (
+               <div className="p-6 text-center text-gray-500">No events scheduled yet.</div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-zinc-800">
+                {events.map(event => (
+                  <div key={event.id || event.title} className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-zinc-800/50">
+                     <div>
+                       <p className="font-medium text-gray-800 dark:text-gray-200">{event.title}</p>
+                       <p className="text-xs text-gray-500 mt-1">
+                         {new Date(event.start_time).toLocaleString()} - {new Date(event.end_time).toLocaleString()}
+                       </p>
+                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
     </>
   );
 }

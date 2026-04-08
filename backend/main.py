@@ -16,6 +16,7 @@ from services.workflow import process_chat_workflow
 from tools.task_tools import list_tasks, complete_task_status
 from tools.notes_tools import fetch_notes
 from tools.reminder_tools import fetch_reminders
+from tools.calendar_tools import fetch_events
 from fastapi.middleware.cors import CORSMiddleware
 
 from services.bigquery_client import get_connection_status as get_bq_status
@@ -142,6 +143,12 @@ async def get_reminders_endpoint(current_user: str = Depends(get_current_user_em
     """Returns user reminders."""
     reminders = await asyncio.to_thread(fetch_reminders, current_user)
     return reminders
+
+@app.get("/events", response_model=List[Dict[str, Any]])
+async def get_events_endpoint(current_user: str = Depends(get_current_user_email)):
+    """Returns user calendar events."""
+    events = await asyncio.to_thread(fetch_events, current_user)
+    return events
 
 @app.get("/models")
 async def get_models_endpoint():

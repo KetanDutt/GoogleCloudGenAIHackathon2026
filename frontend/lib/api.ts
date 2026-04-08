@@ -73,6 +73,11 @@ export const fetchModelsAPI = async () => {
   return response.data;
 };
 
+export const fetchEvents = async () => {
+  const response = await api.get('/events');
+  return response.data;
+};
+
 export const fetchTasks = async () => {
   const response = await api.get(`/tasks`);
   return response.data;

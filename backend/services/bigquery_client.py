@@ -239,6 +239,42 @@ def get_notes(user_id: str) -> List[Dict[str, Any]]:
         logger.error(f"Failed to get notes: {e}", exc_info=True)
         return []
 
+def get_events(user_id: str) -> List[Dict[str, Any]]:
+    if not client:
+        return [{"user_id": user_id, "title": "Mock Event", "start_time": "2024-01-01T10:00:00", "end_time": "2024-01-01T11:00:00"}]
+
+    query = f"""
+        SELECT * FROM `{dataset_id}.events`
+        WHERE user_id = @user_id
+        ORDER BY created_at DESC
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("user_id", "STRING", user_id)]
+    )
+
+    try:
+        query_job = client.query(query, job_config=job_config)
+        results = query_job.result()
+        return [dict(row) for row in results]
+    except Exception as e:
+        if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
+             return []
+        if "Unrecognized name: created_at" in str(e):
+            logger.warning("Falling back to query without 'created_at' for events.")
+            fallback_query = f"""
+                SELECT * FROM `{dataset_id}.events`
+                WHERE user_id = @user_id
+            """
+            try:
+                query_job = client.query(fallback_query, job_config=job_config)
+                results = query_job.result()
+                return [dict(row) for row in results]
+            except Exception as e_fallback:
+                logger.error(f"Failed to get events with fallback: {e_fallback}", exc_info=True)
+                return []
+        logger.error(f"Failed to get events: {e}", exc_info=True)
+        return []
+
 def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bool:
     if not client:
         logger.warning(f"Mock insert_event: {user_id}, {title}, {start_time}-{end_time}")
