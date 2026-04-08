@@ -2,13 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/store/useAppStore";
-import { CheckSquare, StickyNote, Activity, Calendar } from "lucide-react";
+import { CheckSquare, StickyNote, Activity, Calendar, PlayCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
 
+const TEST_PROMPTS = [
+  "Create a study plan for my final exams next week",
+  "Add a study session to my calendar for tomorrow at 2 PM",
+  "Save this note: Important study tip is to take breaks every 45 minutes",
+  "Remind me to review the notes later today"
+];
+
 export default function Home() {
-  const { tasks, notes, systemHealth, loadTasks, loadNotes, loadHealth } = useAppStore();
+  const { tasks, notes, systemHealth, loadTasks, loadNotes, loadHealth, sendMessage } = useAppStore();
   const [mounted, setMounted] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -19,15 +27,59 @@ export default function Home() {
 
   if (!mounted) return null;
 
+  const runTestFlow = async () => {
+    setIsTesting(true);
+    console.log("=== STARTING E2E TEST FLOW ===");
+    try {
+      for (let i = 0; i < TEST_PROMPTS.length; i++) {
+        const prompt = TEST_PROMPTS[i];
+        console.log(`[Test ${i + 1}/${TEST_PROMPTS.length}] Sending prompt: "${prompt}"`);
+        await sendMessage(prompt);
+        console.log(`[Test ${i + 1}/${TEST_PROMPTS.length}] Completed.`);
+
+        // Wait a short moment between prompts
+        if (i < TEST_PROMPTS.length - 1) {
+           await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+      console.log("=== E2E TEST FLOW COMPLETED SUCCESSFULLY ===");
+    } catch (error) {
+      console.error("=== E2E TEST FLOW FAILED ===", error);
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   const pendingTasks = tasks.filter(t => t.status !== 'completed').length;
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
   const totalNotes = notes.length;
 
   return (
     <>
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Dashboard</h1>
-        <p className="text-gray-500 mt-2">Welcome to your AI Personal Operations Manager. Here is a summary of your activities.</p>
+      <header className="mb-8 flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="text-gray-500 mt-2">Welcome to your AI Personal Operations Manager. Here is a summary of your activities.</p>
+        </div>
+        {process.env.NEXT_PUBLIC_ENABLE_TEST_FLOW === 'true' && (
+          <button
+            onClick={runTestFlow}
+            disabled={isTesting}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isTesting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Running Test Flow...
+              </>
+            ) : (
+              <>
+                <PlayCircle className="w-4 h-4" />
+                Run Test Flow
+              </>
+            )}
+          </button>
+        )}
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
