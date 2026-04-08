@@ -36,8 +36,28 @@ try {
 }
 
 # ===== GET BACKEND URL =====
-$BACKEND_URL = gcloud run services describe $BACKEND_SERVICE --region $REGION --format "value(status.url)"
+$BACKEND_URL = (gcloud run services describe $BACKEND_SERVICE --region $REGION --format "value(status.url)") -replace '^https?://', ''
+$BACKEND_URL = "https://$BACKEND_URL"
 Write-Host "Backend URL: $BACKEND_URL" -ForegroundColor Green
+
+# ===== AFTER BACKEND DEPLOYMENT =====
+Write-Host "`n[3.1/5] Setting backend environment variables..." -ForegroundColor Yellow
+
+# Generate a random SECRET_KEY (32+ chars)
+$SECRET_KEY = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
+
+# Get the frontend URL (if not already set)
+if (-not $FRONTEND_URL) {
+    $FRONTEND_URL = gcloud run services describe $FRONTEND_SERVICE --region $REGION --format "value(status.url)"
+}
+
+# Update backend service with env vars
+gcloud run services update $BACKEND_SERVICE `
+    --region $REGION `
+    --set-env-vars "SECRET_KEY=$SECRET_KEY,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$REGION,BIGQUERY_DATASET=ai_ops_manager,CORS_ORIGINS=$FRONTEND_URL" `
+    --quiet
+
+if ($LASTEXITCODE -ne 0) { throw "Failed to set backend environment variables" }
 
 # ===== STEP 4 =====
 Write-Host "`n[4/5] Preparing Frontend..." -ForegroundColor Yellow
