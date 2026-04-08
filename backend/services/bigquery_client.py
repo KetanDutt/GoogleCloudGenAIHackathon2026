@@ -139,7 +139,20 @@ def get_tasks(user_id: str) -> List[Dict[str, Any]]:
         if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
             # Suppress noisy expected local error
             return []
-        logger.error(f"Failed to get tasks: {e}")
+        if "Unrecognized name: created_at" in str(e):
+            logger.warning("Falling back to query without 'created_at' for tasks.")
+            fallback_query = f"""
+                SELECT * FROM `{dataset_id}.tasks`
+                WHERE user_id = @user_id
+            """
+            try:
+                query_job = client.query(fallback_query, job_config=job_config)
+                results = query_job.result()
+                return [dict(row) for row in results]
+            except Exception as e_fallback:
+                logger.error(f"Failed to get tasks with fallback: {e_fallback}", exc_info=True)
+                return []
+        logger.error(f"Failed to get tasks: {e}", exc_info=True)
         return []
 
 def update_task_status(user_id: str, task_name: str, status: str) -> bool:
@@ -165,7 +178,7 @@ def update_task_status(user_id: str, task_name: str, status: str) -> bool:
         query_job.result() # Wait for completion
         return True
     except Exception as e:
-        logger.error(f"Failed to update task status: {e}")
+        logger.error(f"Failed to update task status: {e}", exc_info=True)
         return False
 
 def insert_note(user_id: str, content: str, summary: str = None, action_items: str = None) -> bool:
@@ -210,7 +223,20 @@ def get_notes(user_id: str) -> List[Dict[str, Any]]:
         if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
              # Suppress noisy expected local error
              return []
-        logger.error(f"Failed to get notes: {e}")
+        if "Unrecognized name: created_at" in str(e):
+            logger.warning("Falling back to query without 'created_at' for notes.")
+            fallback_query = f"""
+                SELECT * FROM `{dataset_id}.notes`
+                WHERE user_id = @user_id
+            """
+            try:
+                query_job = client.query(fallback_query, job_config=job_config)
+                results = query_job.result()
+                return [dict(row) for row in results]
+            except Exception as e_fallback:
+                logger.error(f"Failed to get notes with fallback: {e_fallback}", exc_info=True)
+                return []
+        logger.error(f"Failed to get notes: {e}", exc_info=True)
         return []
 
 def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bool:
@@ -275,7 +301,20 @@ def get_reminders(user_id: str) -> List[Dict[str, Any]]:
     except Exception as e:
         if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
              return []
-        logger.error(f"Failed to get reminders: {e}")
+        if "Unrecognized name: created_at" in str(e):
+            logger.warning("Falling back to query without 'created_at' for reminders.")
+            fallback_query = f"""
+                SELECT * FROM `{dataset_id}.reminders`
+                WHERE user_id = @user_id
+            """
+            try:
+                query_job = client.query(fallback_query, job_config=job_config)
+                results = query_job.result()
+                return [dict(row) for row in results]
+            except Exception as e_fallback:
+                logger.error(f"Failed to get reminders with fallback: {e_fallback}", exc_info=True)
+                return []
+        logger.error(f"Failed to get reminders: {e}", exc_info=True)
         return []
 
 # In-memory store for mock users when BigQuery is not available
@@ -319,7 +358,7 @@ def create_user(email: str, hashed_password: str, username: str, avatar: str) ->
         query_job.result()
         return True
     except Exception as e:
-        logger.error(f"Failed to create user: {e}")
+        logger.error(f"Failed to create user: {e}", exc_info=True)
         return False
 
 def get_user_by_email(email: str) -> Dict[str, Any] | None:
@@ -346,7 +385,7 @@ def get_user_by_email(email: str) -> Dict[str, Any] | None:
     except Exception as e:
         if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
             return None
-        logger.error(f"Failed to get user by email: {e}")
+        logger.error(f"Failed to get user by email: {e}", exc_info=True)
         return None
 
 def update_user_password(email: str, new_hashed_password: str) -> bool:
@@ -375,5 +414,5 @@ def update_user_password(email: str, new_hashed_password: str) -> bool:
         query_job.result()
         return True
     except Exception as e:
-        logger.error(f"Failed to update user password: {e}")
+        logger.error(f"Failed to update user password: {e}", exc_info=True)
         return False

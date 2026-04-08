@@ -1,6 +1,9 @@
 import json
 import asyncio
+import warnings
 from fastapi import FastAPI, HTTPException, Depends, status
+
+warnings.filterwarnings('ignore', category=UserWarning, module='vertexai')
 from fastapi.security import OAuth2PasswordBearer
 from typing import List, Dict, Any
 from datetime import timedelta
