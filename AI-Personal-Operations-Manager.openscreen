@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "media": {
+    "screenVideoPath": "C:\\Users\\Ketan Dutt\\AppData\\Roaming\\openscreen\\recordings\\recording-1775671105046.webm"
+  },
+  "editor": {
+    "wallpaper": "file:///C:/Users/Ketan%20Dutt/AppData/Local/Programs/Openscreen/resources/assets/wallpapers/wallpaper1.jpg",
+    "shadowIntensity": 0,
+    "showBlur": true,
+    "motionBlurAmount": 0,
+    "borderRadius": 0,
+    "padding": 50,
+    "cropRegion": {
+      "x": 0,
+      "y": 0,
+      "width": 1,
+      "height": 1
+    },
+    "zoomRegions": [
+      {
+        "id": "zoom-1",
+        "startMs": 10781,
+        "endMs": 18554,
+        "depth": 3,
+        "focus": {
+          "cx": 0.5,
+          "cy": 0.5
+        }
+      },
+      {
+        "id": "zoom-2",
+        "startMs": 32559,
+        "endMs": 48407,
+        "depth": 3,
+        "focus": {
+          "cx": 0.496900826446281,
+          "cy": 0.5215794306703397
+        }
+      }
+    ],
+    "trimRegions": [
+      {
+        "id": "trim-1",
+        "startMs": 123227,
+        "endMs": 155462
+      }
+    ],
+    "speedRegions": [],
+    "annotationRegions": [],
+    "aspectRatio": "16:9",
+    "webcamLayoutPreset": "picture-in-picture",
+    "webcamPosition": null,
+    "exportQuality": "source",
+    "exportFormat": "mp4",
+    "gifFrameRate": 15,
+    "gifLoop": true,
+    "gifSizePreset": "medium"
+  }
+}
