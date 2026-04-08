@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     BIGQUERY_DATASET: str = os.getenv("BIGQUERY_DATASET", "ai_ops_manager")
     PORT: int = int(os.getenv("PORT", 8080))
     SECRET_KEY: str
+    CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "http://localhost:3000")
 
     class Config:
         env_file = ".env"
