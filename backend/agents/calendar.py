@@ -2,7 +2,7 @@ from services.vertex_client import generate_text
 import re
 import datetime
 
-def schedule_task(task: str) -> dict:
+def schedule_task(task: str, model_name: str = "gemini-flash-lite-latest") -> dict:
     """
     Suggests a realistic start and end time (datetime string format) for a given task.
     """
@@ -20,7 +20,7 @@ def schedule_task(task: str) -> dict:
     Make reasonable assumptions about the task duration (e.g., 30 mins, 1 hour).
     """
 
-    response = generate_text(prompt).strip()
+    response = generate_text(prompt, model_name).strip()
 
     start_match = re.search(r'START:\s*([^\n]+)', response)
     end_match = re.search(r'END:\s*([^\n]+)', response)

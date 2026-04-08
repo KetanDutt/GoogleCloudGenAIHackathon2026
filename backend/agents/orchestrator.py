@@ -1,6 +1,6 @@
 from services.vertex_client import generate_text
 
-def route_user_input(user_input: str) -> str:
+def route_user_input(user_input: str, model_name: str = "gemini-flash-lite-latest") -> str:
     """
     Routes the user input to one of the specific sub-agents.
     Expected intents: planner, calendar, notes, reminder.
@@ -17,7 +17,7 @@ def route_user_input(user_input: str) -> str:
     Reply with ONLY the category name in lowercase (planner, calendar, notes, or reminder). If unclear, default to 'planner'.
     """
 
-    response = generate_text(prompt).strip().lower()
+    response = generate_text(prompt, model_name).strip().lower()
 
     # Handle possible extra spaces or markdown formatting if the model disobeys slightly
     for intent in ['planner', 'calendar', 'notes', 'reminder']:

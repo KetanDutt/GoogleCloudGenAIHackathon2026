@@ -1,7 +1,7 @@
 import json
 from services.vertex_client import generate_text
 
-def summarize_and_extract(text: str) -> dict:
+def summarize_and_extract(text: str, model_name: str = "gemini-flash-lite-latest") -> dict:
     """
     Summarizes text and extracts key action items.
     """
@@ -19,7 +19,7 @@ def summarize_and_extract(text: str) -> dict:
     Return ONLY valid JSON.
     """
 
-    response = generate_text(prompt).strip()
+    response = generate_text(prompt, model_name).strip()
 
     # Strip markdown block formatting if present
     if response.startswith("```json"):
