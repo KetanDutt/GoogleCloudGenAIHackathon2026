@@ -102,6 +102,8 @@ def get_connection_status() -> str:
 def insert_task(user_id: str, task_name: str, deadline: str = None) -> bool:
     if not client:
         logger.warning(f"Mock insert_task: {user_id}, {task_name}, {deadline}")
+        import datetime
+        MOCK_TASKS.append({"user_id": user_id, "task_name": task_name, "deadline": deadline, "status": "pending", "created_at": datetime.datetime.now().isoformat()})
         return True
 
     table_ref = f"{dataset_id}.tasks"
@@ -117,10 +119,7 @@ def insert_task(user_id: str, task_name: str, deadline: str = None) -> bool:
 
 def get_tasks(user_id: str) -> List[Dict[str, Any]]:
     if not client:
-        return [
-            {"user_id": user_id, "task_name": "Mock Task", "deadline": "2024-01-01", "status": "pending"},
-            {"user_id": user_id, "task_name": "Completed Mock Task", "deadline": "2023-12-01", "status": "completed"}
-        ]
+        return sorted([t for t in MOCK_TASKS if t["user_id"] == user_id], key=lambda x: x.get("created_at", ""), reverse=True)
 
     query = f"""
         SELECT * FROM `{dataset_id}.tasks`
@@ -158,6 +157,9 @@ def get_tasks(user_id: str) -> List[Dict[str, Any]]:
 def update_task_status(user_id: str, task_name: str, status: str) -> bool:
     if not client:
         logger.warning(f"Mock update_task_status: {user_id}, {task_name} -> {status}")
+        for t in MOCK_TASKS:
+            if t["user_id"] == user_id and t["task_name"] == task_name:
+                t["status"] = status
         return True
 
     query = f"""
@@ -184,6 +186,8 @@ def update_task_status(user_id: str, task_name: str, status: str) -> bool:
 def insert_note(user_id: str, content: str, summary: str = None, action_items: str = None) -> bool:
     if not client:
         logger.warning(f"Mock insert_note: {user_id}, {content}")
+        import datetime
+        MOCK_NOTES.append({"user_id": user_id, "content": content, "summary": summary, "action_items": action_items, "created_at": datetime.datetime.now().isoformat()})
         return True
 
     table_ref = f"{dataset_id}.notes"
@@ -204,7 +208,7 @@ def insert_note(user_id: str, content: str, summary: str = None, action_items: s
 
 def get_notes(user_id: str) -> List[Dict[str, Any]]:
     if not client:
-        return [{"user_id": user_id, "content": "Mock Note"}]
+        return sorted([n for n in MOCK_NOTES if n["user_id"] == user_id], key=lambda x: x.get("created_at", ""), reverse=True)
 
     query = f"""
         SELECT * FROM `{dataset_id}.notes`
@@ -241,7 +245,7 @@ def get_notes(user_id: str) -> List[Dict[str, Any]]:
 
 def get_events(user_id: str) -> List[Dict[str, Any]]:
     if not client:
-        return [{"user_id": user_id, "title": "Mock Event", "start_time": "2024-01-01T10:00:00", "end_time": "2024-01-01T11:00:00"}]
+        return sorted([e for e in MOCK_EVENTS if e["user_id"] == user_id], key=lambda x: x.get("created_at", ""), reverse=True)
 
     query = f"""
         SELECT * FROM `{dataset_id}.events`
@@ -278,6 +282,8 @@ def get_events(user_id: str) -> List[Dict[str, Any]]:
 def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bool:
     if not client:
         logger.warning(f"Mock insert_event: {user_id}, {title}, {start_time}-{end_time}")
+        import datetime
+        MOCK_EVENTS.append({"user_id": user_id, "title": title, "start_time": start_time, "end_time": end_time, "created_at": datetime.datetime.now().isoformat()})
         return True
 
     table_ref = f"{dataset_id}.events"
@@ -299,6 +305,8 @@ def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bo
 def insert_reminder(user_id: str, task: str, urgency: str, suggestion: str) -> bool:
     if not client:
         logger.warning(f"Mock insert_reminder: {user_id}, {task}, {urgency}")
+        import datetime
+        MOCK_REMINDERS.append({"user_id": user_id, "task": task, "urgency": urgency, "suggestion": suggestion, "created_at": datetime.datetime.now().isoformat()})
         return True
 
     table_ref = f"{dataset_id}.reminders"
@@ -319,7 +327,7 @@ def insert_reminder(user_id: str, task: str, urgency: str, suggestion: str) -> b
 
 def get_reminders(user_id: str) -> List[Dict[str, Any]]:
     if not client:
-        return [{"user_id": user_id, "task": "Mock Task", "urgency": "high", "suggestion": "tomorrow"}]
+        return sorted([r for r in MOCK_REMINDERS if r["user_id"] == user_id], key=lambda x: x.get("created_at", ""), reverse=True)
 
     query = f"""
         SELECT * FROM `{dataset_id}.reminders`
@@ -353,8 +361,12 @@ def get_reminders(user_id: str) -> List[Dict[str, Any]]:
         logger.error(f"Failed to get reminders: {e}", exc_info=True)
         return []
 
-# In-memory store for mock users when BigQuery is not available
+# In-memory store for mock data when BigQuery is not available
 MOCK_USERS = {}
+MOCK_TASKS = []
+MOCK_NOTES = []
+MOCK_EVENTS = []
+MOCK_REMINDERS = []
 
 def create_user(email: str, hashed_password: str, username: str, avatar: str) -> bool:
     """Inserts a new user into BigQuery. Returns True if successful, False if email already exists or error."""
