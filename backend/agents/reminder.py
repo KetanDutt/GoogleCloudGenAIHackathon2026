@@ -1,7 +1,7 @@
 import json
 from agents.agent_utils import call_llm_with_retry
 
-def assess_urgency(task: str, model_name: str = "gemini-flash-lite-latest") -> dict:
+def assess_urgency(task: str, model_name: str = "gemini-2.5-flash") -> dict:
     """
     Identifies urgency and returns reminder suggestions.
     """

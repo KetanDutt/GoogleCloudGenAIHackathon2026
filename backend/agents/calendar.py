@@ -2,7 +2,7 @@ from agents.agent_utils import call_llm_with_retry
 import re
 import datetime
 
-def schedule_task(task: str, model_name: str = "gemini-flash-lite-latest") -> dict:
+def schedule_task(task: str, model_name: str = "gemini-2.5-flash") -> dict:
     """
     Suggests a realistic start and end time (datetime string format) for a given task.
     """

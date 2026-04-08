@@ -79,7 +79,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   agentTrace: [],
   systemHealth: null,
   availableModels: [],
-  selectedModel: "gemini-flash-lite-latest",
+  selectedModel: "gemini-2.5-flash-lite",
 
   setToken: (token) => {
     if (token) {

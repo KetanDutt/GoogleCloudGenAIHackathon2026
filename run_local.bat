@@ -38,7 +38,7 @@ if not exist .env (
 )
 echo Installing frontend dependencies...
 call npm install
-start "Frontend" cmd /c "npm run dev"
+start "Frontend" cmd /c "npm run build && npm start"
 cd ..
 
 echo.

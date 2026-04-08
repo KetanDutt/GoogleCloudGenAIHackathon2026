@@ -4,7 +4,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def generate_tasks(goal: str, model_name: str = "gemini-flash-lite-latest") -> list[str]:
+def generate_tasks(goal: str, model_name: str = "gemini-2.5-flash") -> list[str]:
     """
     Generates an actionable bullet-point list of tasks from a goal.
     """

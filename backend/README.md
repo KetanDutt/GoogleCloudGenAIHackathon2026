@@ -33,7 +33,9 @@ backend/
 The backend is designed to run asynchronously. We wrap synchronous Google Cloud SDK calls (BigQuery and VertexAI) in `asyncio.to_thread` inside `main.py` to prevent blocking the FastAPI event loop.
 
 ### Configuration
+
 1. Create a `.env` file based on `.env.example`:
+
    ```env
    GOOGLE_CLOUD_PROJECT=your-gcp-project-id
    GOOGLE_CLOUD_LOCATION=us-central1
@@ -42,6 +44,7 @@ The backend is designed to run asynchronously. We wrap synchronous Google Cloud 
    ```
 
 2. To run locally (with a virtual environment):
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate.bat
@@ -53,7 +56,7 @@ The backend is designed to run asynchronously. We wrap synchronous Google Cloud 
 
 The backend depends on two core GCP services:
 
-1. **Vertex AI:** `services/vertex_client.py` uses the `gemini-flash-lite-latest` model. If authentication fails, the application falls back to a mock string response to prevent complete failure during demonstrations.
+1. **Vertex AI:** `services/vertex_client.py` uses the `gemini-2.5-flash` model. If authentication fails, the application falls back to a mock string response to prevent complete failure during demonstrations.
 2. **BigQuery:** `services/bigquery_client.py` attempts to connect to the dataset specified in your `.env`. Like Vertex AI, it implements resilient mock responses (e.g., returning an empty list of tasks) if GCP credentials are not found.
 
 ## Deployment

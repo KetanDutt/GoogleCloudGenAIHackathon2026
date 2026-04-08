@@ -1,7 +1,7 @@
 import json
 from agents.agent_utils import call_llm_with_retry
 
-def summarize_and_extract(text: str, model_name: str = "gemini-flash-lite-latest") -> dict:
+def summarize_and_extract(text: str, model_name: str = "gemini-2.5-flash") -> dict:
     """
     Summarizes text and extracts key action items.
     """

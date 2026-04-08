@@ -1,6 +1,6 @@
 from agents.agent_utils import call_llm_with_retry
 
-def route_user_input(user_input: str, model_name: str = "gemini-flash-lite-latest") -> str:
+def route_user_input(user_input: str, model_name: str = "gemini-2.5-flash") -> str:
     """
     Routes the user input to one of the specific sub-agents.
     Expected intents: planner, calendar, notes, reminder.

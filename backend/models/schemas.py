@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any
 
 class ChatRequest(BaseModel):
     user_input: str
-    model_name: Optional[str] = "gemini-flash-lite-latest"
+    model_name: Optional[str] = "gemini-2.5-flash"
 
 class AgentTraceStep(BaseModel):
     step: str
