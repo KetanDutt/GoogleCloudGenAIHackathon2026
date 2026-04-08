@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAppStore } from "@/store/useAppStore";
 import { CheckCircle2, Clock, RotateCw, Calendar, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,31 +8,47 @@ import clsx from "clsx";
 
 export default function TaskList() {
   const { tasks, loadTasks, isLoading, completeTask } = useAppStore();
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
 
+  const filteredTasks = useMemo(() => {
+    if (!searchQuery.trim()) return tasks;
+    const q = searchQuery.toLowerCase();
+    return tasks.filter(task => task.task_name.toLowerCase().includes(q));
+  }, [tasks, searchQuery]);
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 w-full max-w-4xl mx-auto dark:bg-zinc-900 dark:border-zinc-800">
-      <div className="flex items-center justify-between mb-6 border-b pb-4 border-gray-100 dark:border-zinc-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 border-b pb-4 border-gray-100 dark:border-zinc-800 gap-4">
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-indigo-500" /> My Tasks
           </h2>
           <p className="text-sm text-gray-500 mt-1">Manage and track your action items.</p>
         </div>
-        <button
-          onClick={loadTasks}
-          disabled={isLoading}
-          className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400"
-          title="Refresh Tasks"
-        >
-          <RotateCw className={clsx("w-5 h-5", isLoading && "animate-spin")} />
-        </button>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
+          />
+          <button
+            onClick={loadTasks}
+            disabled={isLoading}
+            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400"
+            title="Refresh Tasks"
+          >
+            <RotateCw className={clsx("w-5 h-5", isLoading && "animate-spin")} />
+          </button>
+        </div>
       </div>
 
-      {tasks.length === 0 ? (
+      {filteredTasks.length === 0 ? (
         <div className="text-center py-12">
           <Calendar className="w-12 h-12 mx-auto text-gray-200 mb-3 dark:text-gray-700" />
           <p className="text-gray-500 font-medium">No tasks found.</p>
@@ -41,7 +57,7 @@ export default function TaskList() {
       ) : (
         <div className="space-y-3">
           <AnimatePresence>
-            {tasks.map((task, index) => {
+            {filteredTasks.map((task, index) => {
               const isCompleted = task.status === 'completed';
               return (
                 <motion.div
