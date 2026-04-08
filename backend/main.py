@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from datetime import timedelta
 
-from models.schemas import ChatRequest, ChatResponse, TaskCompleteRequest, UserCreate, UserLogin, ForgotPasswordRequest, TokenResponse, UserResponse
+from models.schemas import ChatRequest, ChatResponse, TaskCompleteRequest, UserCreate, UserLogin, TokenResponse, UserResponse
 from services.auth_service import get_password_hash, verify_password, create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from services.bigquery_client import create_user, get_user_by_email, update_user_password
 from agents.orchestrator import route_user_input
@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from services.bigquery_client import get_connection_status as get_bq_status
 from services.vertex_client import get_connection_status as get_vertex_status
+from config.settings import settings
 
 app = FastAPI(
     title="AI Personal Operations Manager",
@@ -31,7 +32,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
