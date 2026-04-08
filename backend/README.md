@@ -53,7 +53,7 @@ The backend is designed to run asynchronously. We wrap synchronous Google Cloud 
 
 The backend depends on two core GCP services:
 
-1. **Vertex AI:** `services/vertex_client.py` uses the `gemini-1.5-flash` model. If authentication fails, the application falls back to a mock string response to prevent complete failure during demonstrations.
+1. **Vertex AI:** `services/vertex_client.py` uses the `gemini-flash-lite-latest` model. If authentication fails, the application falls back to a mock string response to prevent complete failure during demonstrations.
 2. **BigQuery:** `services/bigquery_client.py` attempts to connect to the dataset specified in your `.env`. Like Vertex AI, it implements resilient mock responses (e.g., returning an empty list of tasks) if GCP credentials are not found.
 
 ## Deployment

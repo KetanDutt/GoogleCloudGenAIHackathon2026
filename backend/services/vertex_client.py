@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 # Initialize Vertex AI
 try:
     vertexai.init(project=settings.PROJECT_ID, location=settings.LOCATION)
-    model = GenerativeModel("gemini-1.5-flash")
+    model = GenerativeModel("gemini-flash-lite-latest")
 except Exception as e:
     logger.error(f"Failed to initialize Vertex AI: {e}")
     # Fallback to avoid breaking tests if GCP is not properly configured
