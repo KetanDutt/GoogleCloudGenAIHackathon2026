@@ -81,9 +81,13 @@ export function MessageBubble({ role, content, timestamp, intent, isError, onRet
 
 export default function ChatWindow() {
   const [input, setInput] = useState("");
-  const { messages, sendMessage, isLoading, activeAgent } = useAppStore();
+  const { messages, sendMessage, isLoading, activeAgent, availableModels, selectedModel, setSelectedModel, loadModels } = useAppStore();
   const bottomRef = useRef<HTMLDivElement>(null);
   const { transcript, listening, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
+
+  useEffect(() => {
+    loadModels();
+  }, [loadModels]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -120,6 +124,19 @@ export default function ChatWindow() {
 
   return (
     <div className="flex flex-col h-full w-full max-w-4xl mx-auto rounded-2xl overflow-hidden bg-gray-50/50 border border-gray-200 shadow-sm dark:bg-zinc-900 dark:border-zinc-800">
+      {availableModels && availableModels.length > 0 && (
+        <div className="flex justify-end p-2 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            className="text-xs border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white px-2 py-1"
+          >
+            {availableModels.map(model => (
+              <option key={model} value={model}>{model}</option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <AnimatePresence>
           {messages.length === 0 ? (

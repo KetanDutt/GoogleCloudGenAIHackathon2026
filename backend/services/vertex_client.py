@@ -37,16 +37,30 @@ def get_connection_status() -> str:
 
     return vertex_status
 
-def generate_text(prompt: str) -> str:
+def get_available_models() -> list[str]:
+    """Returns a list of available Vertex AI foundational models for chat."""
+    return [
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-flash-lite-latest",
+        "gemini-1.0-pro"
+    ]
+
+def generate_text(prompt: str, model_name: str = "gemini-flash-lite-latest") -> str:
     """
-    Generates text using the Gemini 1.5 Flash model on Vertex AI.
+    Generates text using the specified Gemini model on Vertex AI.
     """
     if not model:
         # Mocking or returning a default response if not configured
         return f"[Mock VertexAI] Prompt received: {prompt}"
 
     try:
-        response = model.generate_content(prompt)
+        # Use dynamic model if provided and different from the global default
+        active_model = model
+        if model_name and model_name != "gemini-flash-lite-latest":
+             active_model = GenerativeModel(model_name)
+
+        response = active_model.generate_content(prompt)
         return response.text
     except Exception as e:
         if "SERVICE_DISABLED" in str(e) or "has not been used in project" in str(e):

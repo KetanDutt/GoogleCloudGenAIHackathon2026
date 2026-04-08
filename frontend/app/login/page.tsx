@@ -22,8 +22,12 @@ export default function LoginPage() {
       setToken(data.access_token);
       toast.success("Logged in successfully");
       router.push("/");
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Login failed");
+    } catch (error: unknown) {
+      if (error instanceof Error && 'response' in error) {
+        toast.error((error as {response?: {data?: {detail?: string}}}).response?.data?.detail || "Login failed");
+      } else {
+        toast.error("Login failed");
+      }
     } finally {
       setLoading(false);
     }

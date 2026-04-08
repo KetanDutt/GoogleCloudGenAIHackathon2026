@@ -1,6 +1,6 @@
 from services.vertex_client import generate_text
 
-def assess_urgency(task: str) -> dict:
+def assess_urgency(task: str, model_name: str = "gemini-flash-lite-latest") -> dict:
     """
     Identifies urgency and returns reminder suggestions.
     """
@@ -16,7 +16,7 @@ def assess_urgency(task: str) -> dict:
     }}
     """
 
-    response = generate_text(prompt).strip()
+    response = generate_text(prompt, model_name).strip()
 
     import json
     if response.startswith("```json"):

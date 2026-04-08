@@ -24,7 +24,7 @@ export default function WorkflowVisualizer() {
         <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" /> Live Execution Flow
       </h3>
 
-      <div className="relative flex justify-between items-center w-full max-w-2xl mx-auto">
+      <div className="relative flex justify-between items-center w-full max-w-2xl mx-auto pb-10">
         {/* Connection Lines */}
         <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-100 -z-10 -translate-y-1/2 rounded-full dark:bg-zinc-800" />
         <motion.div
@@ -80,7 +80,7 @@ export default function WorkflowVisualizer() {
       </div>
 
       {agentTrace && agentTrace.length > 0 && (
-        <div className="mt-24 w-full">
+        <div className="mt-8 w-full">
            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2 dark:text-gray-400">
              <Activity className="w-4 h-4" /> Execution Trace
            </h4>

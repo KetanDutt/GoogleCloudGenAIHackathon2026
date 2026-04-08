@@ -20,7 +20,7 @@ from tools.calendar_tools import schedule_event
 from fastapi.middleware.cors import CORSMiddleware
 
 from services.bigquery_client import get_connection_status as get_bq_status
-from services.vertex_client import get_connection_status as get_vertex_status
+from services.vertex_client import get_connection_status as get_vertex_status, get_available_models
 from config.settings import settings
 
 app = FastAPI(
@@ -119,10 +119,11 @@ async def handle_request(request: ChatRequest, current_user: str) -> ChatRespons
     """
     user_input = request.user_input
     user_id = current_user
+    model_name = request.model_name
 
-    trace = [{"step": "User Input", "details": user_input}]
+    trace = [{"step": "User Input", "details": f"[{model_name}] {user_input}"}]
     # 1. Orchestrate
-    intent = await asyncio.to_thread(route_user_input, user_input)
+    intent = await asyncio.to_thread(route_user_input, user_input, model_name)
     trace.append({"step": "Orchestrator", "details": f"Routed to {intent} agent"})
     response_data = {}
 
@@ -130,13 +131,13 @@ async def handle_request(request: ChatRequest, current_user: str) -> ChatRespons
         if intent == "planner":
             # Generate tasks
             trace.append({"step": "Agent Processing", "details": "Planner agent generating tasks..."})
-            tasks = await asyncio.to_thread(generate_tasks, user_input)
+            tasks = await asyncio.to_thread(generate_tasks, user_input, model_name)
             scheduled_tasks = []
 
             for task_name in tasks:
                 # Schedule each task via calendar agent
                 trace.append({"step": "Agent Processing", "details": f"Calendar agent scheduling task: {task_name}"})
-                time_suggestion = await asyncio.to_thread(schedule_task, task_name)
+                time_suggestion = await asyncio.to_thread(schedule_task, task_name, model_name)
                 start_time = time_suggestion.get("start_time")
                 end_time = time_suggestion.get("end_time")
 
@@ -157,7 +158,7 @@ async def handle_request(request: ChatRequest, current_user: str) -> ChatRespons
         elif intent == "notes":
             # Summarize and extract
             trace.append({"step": "Agent Processing", "details": "Notes agent summarizing and extracting action items..."})
-            extracted = await asyncio.to_thread(summarize_and_extract, user_input)
+            extracted = await asyncio.to_thread(summarize_and_extract, user_input, model_name)
             summary = extracted.get("summary")
             action_items = extracted.get("action_items", [])
 
@@ -176,7 +177,7 @@ async def handle_request(request: ChatRequest, current_user: str) -> ChatRespons
         elif intent == "calendar":
             # Schedule a single event
             trace.append({"step": "Agent Processing", "details": "Calendar agent suggesting times..."})
-            time_suggestion = await asyncio.to_thread(schedule_task, user_input)
+            time_suggestion = await asyncio.to_thread(schedule_task, user_input, model_name)
             start_time = time_suggestion.get("start_time")
             end_time = time_suggestion.get("end_time")
 
@@ -192,7 +193,7 @@ async def handle_request(request: ChatRequest, current_user: str) -> ChatRespons
 
         elif intent == "reminder":
             trace.append({"step": "Agent Processing", "details": "Reminder agent assessing urgency..."})
-            urgency_data = await asyncio.to_thread(assess_urgency, user_input)
+            urgency_data = await asyncio.to_thread(assess_urgency, user_input, model_name)
             trace.append({"step": "Database Sync", "details": "No database actions needed for reminders."})
             response_data = {
                 "reminder_set_for": user_input,
@@ -233,6 +234,11 @@ async def get_notes_endpoint(current_user: str = Depends(get_current_user_email)
     """Returns user notes."""
     notes = await asyncio.to_thread(fetch_notes, current_user)
     return notes
+
+@app.get("/models")
+async def get_models_endpoint():
+    """Returns available Vertex AI models."""
+    return {"models": get_available_models()}
 
 @app.get("/health")
 async def health_check():

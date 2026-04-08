@@ -59,8 +59,17 @@ export const registerAPI = async (email: string, password: string, username: str
   return response.data;
 };
 
-export const sendChatRequest = async (userInput: string) => {
-  const response = await api.post('/chat', { user_input: userInput });
+export const sendChatRequest = async (userInput: string, modelName?: string) => {
+  const payload: Record<string, string> = { user_input: userInput };
+  if (modelName) {
+    payload.model_name = modelName;
+  }
+  const response = await api.post('/chat', payload);
+  return response.data;
+};
+
+export const fetchModelsAPI = async () => {
+  const response = await api.get('/models');
   return response.data;
 };
 

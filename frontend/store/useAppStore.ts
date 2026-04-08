@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI, fetchHealth, fetchUserMeAPI } from '../lib/api';
+import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI, fetchHealth, fetchUserMeAPI, fetchModelsAPI } from '../lib/api';
 import toast from 'react-hot-toast';
 
 export interface User {
@@ -52,6 +52,8 @@ interface AppState {
   workflowStep: 'idle' | 'orchestrating' | 'processing' | 'saving' | 'done';
   agentTrace: AgentTraceStep[];
   systemHealth: { status: string; bigquery: string; vertex_ai: string } | null;
+  availableModels: string[];
+  selectedModel: string;
   setToken: (token: string | null) => void;
   loadUser: () => Promise<void>;
   logout: () => void;
@@ -61,6 +63,8 @@ interface AppState {
   loadNotes: () => Promise<void>;
   completeTask: (taskName: string) => Promise<void>;
   loadHealth: () => Promise<void>;
+  loadModels: () => Promise<void>;
+  setSelectedModel: (model: string) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -74,6 +78,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   workflowStep: 'idle',
   agentTrace: [],
   systemHealth: null,
+  availableModels: [],
+  selectedModel: "gemini-flash-lite-latest",
 
   setToken: (token) => {
     if (token) {
@@ -114,7 +120,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoading: true, workflowStep: 'orchestrating', activeAgent: 'Orchestrator', agentTrace: [] });
 
     try {
-      const response = await sendChatRequest(text);
+      const response = await sendChatRequest(text, get().selectedModel);
 
       const intent = response.intent;
       const trace = response.trace || [];
@@ -220,5 +226,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       console.error('Failed to fetch health status', error);
       set({ systemHealth: { status: 'error', bigquery: 'disconnected', vertex_ai: 'disconnected' } });
     }
+  },
+
+  loadModels: async () => {
+    try {
+      const data = await fetchModelsAPI();
+      set({ availableModels: data.models || [] });
+    } catch (error) {
+      console.error('Failed to fetch models', error);
+    }
+  },
+
+  setSelectedModel: (model: string) => {
+    set({ selectedModel: model });
   },
 }));
