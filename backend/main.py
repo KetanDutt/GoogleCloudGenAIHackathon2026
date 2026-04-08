@@ -2,13 +2,12 @@ import json
 import asyncio
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
-from pydantic import BaseModel
 from typing import List, Dict, Any
 from datetime import timedelta
 
 from models.schemas import ChatRequest, ChatResponse, TaskCompleteRequest, UserCreate, UserLogin, TokenResponse, UserResponse
 from services.auth_service import get_password_hash, verify_password, create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from services.bigquery_client import create_user, get_user_by_email, update_user_password
+from services.bigquery_client import create_user, get_user_by_email
 from agents.orchestrator import route_user_input
 from agents.planner import generate_tasks
 from agents.calendar import schedule_task
