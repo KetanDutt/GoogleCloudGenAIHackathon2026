@@ -62,6 +62,17 @@ def _ensure_tables_exist():
         event_table = bigquery.Table(f"{dataset_id}.events", schema=event_schema)
         client.create_table(event_table, exists_ok=True)
 
+        # Schema for reminders
+        reminder_schema = [
+            bigquery.SchemaField("user_id", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("task", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("urgency", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("suggestion", "STRING", mode="REQUIRED"),
+            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE", default_value_expression="CURRENT_TIMESTAMP()"),
+        ]
+        reminder_table = bigquery.Table(f"{dataset_id}.reminders", schema=reminder_schema)
+        client.create_table(reminder_table, exists_ok=True)
+
         # Schema for users
         user_schema = [
             bigquery.SchemaField("email", "STRING", mode="REQUIRED"),
@@ -222,6 +233,50 @@ def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bo
     except GoogleAPIError as e:
         logger.error(f"Failed to insert event: {e}")
         return False
+
+def insert_reminder(user_id: str, task: str, urgency: str, suggestion: str) -> bool:
+    if not client:
+        logger.warning(f"Mock insert_reminder: {user_id}, {task}, {urgency}")
+        return True
+
+    table_ref = f"{dataset_id}.reminders"
+    rows_to_insert = [
+        {
+            "user_id": user_id,
+            "task": task,
+            "urgency": urgency,
+            "suggestion": suggestion
+        }
+    ]
+    try:
+        errors = client.insert_rows_json(table_ref, rows_to_insert)
+        return not errors
+    except GoogleAPIError as e:
+        logger.error(f"Failed to insert reminder: {e}")
+        return False
+
+def get_reminders(user_id: str) -> List[Dict[str, Any]]:
+    if not client:
+        return [{"user_id": user_id, "task": "Mock Task", "urgency": "high", "suggestion": "tomorrow"}]
+
+    query = f"""
+        SELECT * FROM `{dataset_id}.reminders`
+        WHERE user_id = @user_id
+        ORDER BY created_at DESC
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("user_id", "STRING", user_id)]
+    )
+
+    try:
+        query_job = client.query(query, job_config=job_config)
+        results = query_job.result()
+        return [dict(row) for row in results]
+    except Exception as e:
+        if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
+             return []
+        logger.error(f"Failed to get reminders: {e}")
+        return []
 
 # In-memory store for mock users when BigQuery is not available
 MOCK_USERS = {}

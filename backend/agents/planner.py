@@ -1,4 +1,4 @@
-from services.vertex_client import generate_text
+from agents.agent_utils import call_llm_with_retry
 import re
 import logging
 
@@ -17,23 +17,26 @@ def generate_tasks(goal: str, model_name: str = "gemini-flash-lite-latest") -> l
     Keep tasks concise and actionable.
     """
 
-    response = generate_text(prompt, model_name).strip()
-
-    # Extract bullet points
-    tasks = []
-    try:
+    def parse_tasks(response: str) -> list[str]:
+        tasks = []
         for line in response.split('\n'):
             line = line.strip()
             if line.startswith('-') or line.startswith('*'):
                 tasks.append(re.sub(r'^[-\*]\s*', '', line))
 
-        # Fallback if parsing fails but response exists
-        if not tasks and response:
-            # Split by new lines if the model ignored bullets
-            tasks = [t.strip() for t in response.split('\n') if t.strip()]
-    except Exception as e:
-        logger.error(f"Error parsing planner response: {e}")
-        # Return a safe fallback task if parsing completely fails
-        tasks = [f"Complete goal: {goal}"]
+        if not tasks:
+             # Try splitting by new lines if bullets were missed
+             tasks = [t.strip() for t in response.split('\n') if t.strip()]
 
-    return tasks
+        if not tasks:
+             raise ValueError("Could not extract any tasks from the response.")
+
+        return tasks
+
+    return call_llm_with_retry(
+        prompt=prompt,
+        model_name=model_name,
+        parse_func=parse_tasks,
+        fallback_value=[f"Complete goal: {goal}"],
+        clarification_prompt_template="The previous response was not a valid bulleted list. Please provide a simple list of tasks starting with dashes (-). Original request: {prompt}"
+    )
