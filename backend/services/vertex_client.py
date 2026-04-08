@@ -46,13 +46,18 @@ def get_available_models() -> list[str]:
         "gemini-1.0-pro"
     ]
 
+class VertexAIError(Exception):
+    """Custom exception raised when Vertex AI is unavailable or an error occurs."""
+    pass
+
 def generate_text(prompt: str, model_name: str = "gemini-flash-lite-latest") -> str:
     """
     Generates text using the specified Gemini model on Vertex AI.
+    Raises VertexAIError on failure.
     """
     if not model:
-        # Mocking or returning a default response if not configured
-        return f"[Mock VertexAI] Prompt received: {prompt}"
+        # Raise instead of returning a mock string
+        raise VertexAIError("Vertex AI is not initialized or configured properly.")
 
     try:
         # Use dynamic model if provided and different from the global default
@@ -64,7 +69,7 @@ def generate_text(prompt: str, model_name: str = "gemini-flash-lite-latest") -> 
         return response.text
     except Exception as e:
         if "SERVICE_DISABLED" in str(e) or "has not been used in project" in str(e):
-             logger.warning("Vertex AI is not enabled for this project. Returning mock fallback.")
-             return f"[Mock VertexAI Fallback] Attempted to process: {prompt[:50]}..."
+             logger.warning("Vertex AI is not enabled for this project.")
+             raise VertexAIError(f"Vertex AI API not enabled: {e}")
         logger.error(f"Error calling Vertex AI: {e}")
-        return ""
+        raise VertexAIError(f"Error generating text: {e}")

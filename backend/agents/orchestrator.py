@@ -1,4 +1,4 @@
-from services.vertex_client import generate_text
+from agents.agent_utils import call_llm_with_retry
 
 def route_user_input(user_input: str, model_name: str = "gemini-flash-lite-latest") -> str:
     """
@@ -17,11 +17,17 @@ def route_user_input(user_input: str, model_name: str = "gemini-flash-lite-lates
     Reply with ONLY the category name in lowercase (planner, calendar, notes, or reminder). If unclear, default to 'planner'.
     """
 
-    response = generate_text(prompt, model_name).strip().lower()
+    def parse_intent(response: str) -> str:
+        response_clean = response.strip().lower()
+        for valid_intent in ['planner', 'calendar', 'notes', 'reminder']:
+            if valid_intent in response_clean:
+                return valid_intent
+        raise ValueError(f"Could not extract a valid intent from response: {response}")
 
-    # Handle possible extra spaces or markdown formatting if the model disobeys slightly
-    for intent in ['planner', 'calendar', 'notes', 'reminder']:
-        if intent in response:
-            return intent
-
-    return "planner"
+    return call_llm_with_retry(
+        prompt=prompt,
+        model_name=model_name,
+        parse_func=parse_intent,
+        fallback_value="planner",
+        clarification_prompt_template="The previous response was invalid. Please reply with ONLY ONE of the following words and nothing else: planner, calendar, notes, reminder. Original request: {prompt}"
+    )

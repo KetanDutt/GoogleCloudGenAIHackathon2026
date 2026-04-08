@@ -1,4 +1,5 @@
-from services.vertex_client import generate_text
+import json
+from agents.agent_utils import call_llm_with_retry
 
 def assess_urgency(task: str, model_name: str = "gemini-flash-lite-latest") -> dict:
     """
@@ -16,18 +17,33 @@ def assess_urgency(task: str, model_name: str = "gemini-flash-lite-latest") -> d
     }}
     """
 
-    response = generate_text(prompt, model_name).strip()
+    def parse_reminder(response: str) -> dict:
+        clean_response = response.strip()
+        if clean_response.startswith("```json"):
+            clean_response = clean_response.replace("```json", "", 1)
+            if clean_response.endswith("```"):
+                clean_response = clean_response[:-3]
+        elif clean_response.startswith("```"):
+            clean_response = clean_response.replace("```", "", 1)
+            if clean_response.endswith("```"):
+                clean_response = clean_response[:-3]
 
-    import json
-    if response.startswith("```json"):
-        response = response.replace("```json", "", 1).replace("```", "")
+        data = json.loads(clean_response.strip())
+        urgency = data.get("urgency_level", "").lower()
+        suggestion = data.get("reminder_suggestion", "")
 
-    try:
-        data = json.loads(response.strip())
-        urgency = data.get("urgency_level", "low")
-        suggestion = data.get("reminder_suggestion", "1 hour before")
-    except json.JSONDecodeError:
-        urgency = "low"
-        suggestion = "1 hour before"
+        if urgency not in ["low", "medium", "high"]:
+            raise ValueError("urgency_level must be one of: low, medium, high")
 
-    return {"urgency_level": urgency, "reminder_suggestion": suggestion}
+        if not suggestion:
+            raise ValueError("reminder_suggestion cannot be empty")
+
+        return {"urgency_level": urgency, "reminder_suggestion": suggestion}
+
+    return call_llm_with_retry(
+        prompt=prompt,
+        model_name=model_name,
+        parse_func=parse_reminder,
+        fallback_value={"urgency_level": "medium", "reminder_suggestion": "1 hour before"},
+        clarification_prompt_template="The previous response was not valid JSON or the values were incorrect. Please return exactly the requested JSON format with urgency_level strictly as one of 'low', 'medium', or 'high'. Original request: {prompt}"
+    )

@@ -1,5 +1,5 @@
 import json
-from services.vertex_client import generate_text
+from agents.agent_utils import call_llm_with_retry
 
 def summarize_and_extract(text: str, model_name: str = "gemini-flash-lite-latest") -> dict:
     """
@@ -19,29 +19,33 @@ def summarize_and_extract(text: str, model_name: str = "gemini-flash-lite-latest
     Return ONLY valid JSON.
     """
 
-    response = generate_text(prompt, model_name).strip()
+    def parse_notes(response: str) -> dict:
+        # Strip markdown block formatting if present
+        clean_response = response.strip()
+        if clean_response.startswith("```json"):
+            clean_response = clean_response.replace("```json", "", 1)
+            if clean_response.endswith("```"):
+                clean_response = clean_response[:-3]
+        elif clean_response.startswith("```"):
+            clean_response = clean_response.replace("```", "", 1)
+            if clean_response.endswith("```"):
+                clean_response = clean_response[:-3]
 
-    # Strip markdown block formatting if present
-    if response.startswith("```json"):
-        response = response.replace("```json", "", 1).replace("```", "")
-    elif response.startswith("```"):
-        response = response.replace("```", "", 1).replace("```", "")
-
-    try:
-        data = json.loads(response.strip())
+        data = json.loads(clean_response.strip())
         summary = data.get("summary", "")
-        if not isinstance(summary, str):
-            summary = str(summary)
-
         action_items = data.get("action_items", [])
+
+        if not isinstance(summary, str):
+            raise ValueError("Summary must be a string")
         if not isinstance(action_items, list):
-            action_items = []
+            raise ValueError("Action items must be a list")
 
-    except json.JSONDecodeError:
-        summary = "Could not parse summary from LLM response. The raw response was: " + response[:100] + "..."
-        action_items = []
-    except Exception as e:
-        summary = f"Unexpected error during parsing: {e}"
-        action_items = []
+        return {"summary": summary, "action_items": action_items}
 
-    return {"summary": summary, "action_items": action_items}
+    return call_llm_with_retry(
+        prompt=prompt,
+        model_name=model_name,
+        parse_func=parse_notes,
+        fallback_value={"summary": f"Fallback summary for: {text[:50]}...", "action_items": []},
+        clarification_prompt_template="The previous response was not valid JSON. Please return ONLY a valid JSON object matching the exact schema requested. Original request: {prompt}"
+    )
