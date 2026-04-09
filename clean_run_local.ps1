@@ -33,7 +33,7 @@ if ($backupChoice -eq 'y') {
     foreach ($table in $tables) {
         $outputFile = "$BACKUP_DIR\$table.json"
         bq query --nouse_legacy_sql --format=prettyjson `
-            "SELECT * FROM \`$PROJECT_ID.$DATASET.$table\`" > $outputFile
+            "SELECT * FROM ``$PROJECT_ID.$DATASET.$table``" > $outputFile
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Failed to backup $table (may not exist)"
         } else {
@@ -56,7 +56,7 @@ if ($resetChoice -eq 'y') {
     # Truncate each table (delete all rows)
     $tables = @("tasks", "notes", "events", "reminders", "users")
     foreach ($table in $tables) {
-        bq query --nouse_legacy_sql "DELETE FROM \`$PROJECT_ID.$DATASET.$table\` WHERE TRUE"
+        bq query --nouse_legacy_sql "DELETE FROM ``$PROJECT_ID.$DATASET.$table`` WHERE TRUE"
         Write-Host "  Truncated $table" -ForegroundColor Green
     }
 }

@@ -21,6 +21,7 @@ def _ensure_tables_exist():
     """Ensure that necessary tables exist in BigQuery."""
     global bq_status
     if not client:
+        bq_status = "mocked"
         return
 
     try:
@@ -89,8 +90,10 @@ def _ensure_tables_exist():
         # Simplify error output if running locally without GCP configured
         if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
             logger.warning("BigQuery is not enabled or configured for this project. Running in mock mode.")
+            bq_status = "mocked"
         else:
             logger.error(f"Error ensuring tables exist: {e}")
+            bq_status = "mocked"
 
 # Call it safely
 _ensure_tables_exist()
