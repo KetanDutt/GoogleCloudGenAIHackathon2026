@@ -49,8 +49,8 @@ if ($backupChoice -eq 'y') {
 Write-Host "`nResetting BigQuery dataset..." -ForegroundColor Yellow
 $resetChoice = Read-Host "Drop and recreate entire dataset '$DATASET'? (y/n) - if 'n', tables will be truncated"
 if ($resetChoice -eq 'y') {
-    bq rm -f -d $PROJECT_ID:$DATASET
-    bq mk --location=$REGION --dataset $PROJECT_ID:$DATASET
+    bq rm -f -d ${PROJECT_ID}:${DATASET}
+    bq mk --location=$REGION --dataset ${PROJECT_ID}:${DATASET}
     Write-Host "Dataset recreated." -ForegroundColor Green
 } else {
     # Truncate each table (delete all rows)
@@ -71,7 +71,7 @@ if ($backupChoice -eq 'y') {
         foreach ($table in $tables) {
             $file = "$BACKUP_DIR\$table.json"
             if (Test-Path $file) {
-                bq load --source_format=NEWLINE_DELIMITED_JSON "$PROJECT_ID:$DATASET.$table" $file
+                bq load --source_format=NEWLINE_DELIMITED_JSON "${PROJECT_ID}:${DATASET}.${table}" $file
                 Write-Host "  ✓ $table restored" -ForegroundColor Green
             }
         }

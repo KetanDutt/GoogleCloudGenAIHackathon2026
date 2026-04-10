@@ -1,0 +1,14 @@
+[
+  {
+    "avatar": "2", 
+    "email": "ketan.dutt@yahoo.in", 
+    "hashed_password": "$2b$12$H6WZ2Ri76c35PY6qZH3cseSOzOpySkxf1eZGONBV5czDD23u426lm", 
+    "username": "Ketan"
+  }, 
+  {
+    "avatar": "6", 
+    "email": "ketan6196@gmail.com", 
+    "hashed_password": "$2b$12$kJIApxXuXXIxi8q6wMFIhuB2F/8EePr3YqqhFiP9Rc3QdzbafDQSe", 
+    "username": "K10dutt"
+  }
+]
