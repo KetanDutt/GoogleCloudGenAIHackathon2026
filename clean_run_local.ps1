@@ -49,7 +49,7 @@ if ($backupChoice -eq 'y') {
 Write-Host "`nResetting BigQuery dataset..." -ForegroundColor Yellow
 $resetChoice = Read-Host "Drop and recreate entire dataset '$DATASET'? (y/n) - if 'n', tables will be truncated"
 if ($resetChoice -eq 'y') {
-    bq rm -f -d ${PROJECT_ID}:${DATASET}
+    bq rm -r -f -d ${PROJECT_ID}:${DATASET}
     bq mk --location=$REGION --dataset ${PROJECT_ID}:${DATASET}
     Write-Host "Dataset recreated." -ForegroundColor Green
 } else {
@@ -79,12 +79,16 @@ if ($backupChoice -eq 'y') {
 }
 
 # ----------------------------------------------------------------------
-# 5. Clear Frontend Build Cache
+# 5. Clear Frontend Build Cache and Local Mock DB
 # ----------------------------------------------------------------------
-Write-Host "`nClearing frontend build cache..." -ForegroundColor Yellow
+Write-Host "`nClearing frontend build cache and local mock database..." -ForegroundColor Yellow
 if (Test-Path "frontend\.next") {
     Remove-Item -Recurse -Force "frontend\.next"
     Write-Host "  ✓ .next folder deleted" -ForegroundColor Green
+}
+if (Test-Path "backend\mock_db.json") {
+    Remove-Item -Force "backend\mock_db.json"
+    Write-Host "  ✓ backend\mock_db.json deleted" -ForegroundColor Green
 }
 
 # ----------------------------------------------------------------------
