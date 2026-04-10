@@ -196,7 +196,11 @@ def update_task_status(user_id: str, task_name: str, status: str) -> bool:
         query_job.result() # Wait for completion
         return True
     except Exception as e:
-        logger.error(f"Failed to update task status: {e}", exc_info=True)
+        error_msg = str(e)
+        if "would affect rows in the streaming buffer" in error_msg:
+            logger.warning(f"Task status cannot be updated immediately due to BigQuery streaming buffer constraints for {user_id}, {task_name}.")
+        else:
+            logger.error(f"Failed to update task status: {e}", exc_info=True)
         return False
 
 def insert_note(user_id: str, content: str, summary: str = None, action_items: str = None) -> bool:
@@ -541,5 +545,9 @@ def update_user_password(email: str, new_hashed_password: str) -> bool:
         query_job.result()
         return True
     except Exception as e:
-        logger.error(f"Failed to update user password: {e}", exc_info=True)
+        error_msg = str(e)
+        if "would affect rows in the streaming buffer" in error_msg:
+            logger.warning(f"User password cannot be updated immediately due to BigQuery streaming buffer constraints for {email}.")
+        else:
+            logger.error(f"Failed to update user password: {e}", exc_info=True)
         return False
