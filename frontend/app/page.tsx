@@ -139,7 +139,7 @@ export default function Home() {
           <div className="text-xs text-gray-500 flex flex-col gap-1.5 mt-2">
              <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg dark:bg-zinc-800">
                <span>BigQuery (Tasks/Notes):</span>
-               <span className={clsx("font-medium px-2 py-0.5 rounded-full text-[10px] uppercase", systemHealth?.bigquery === 'connected' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
+               <span className={clsx("font-medium px-2 py-0.5 rounded-full text-[10px] uppercase", systemHealth?.bigquery === 'connected' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : systemHealth?.bigquery === 'mocked' ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
                  {systemHealth?.bigquery || 'checking...'}
                </span>
              </div>

@@ -21,6 +21,7 @@ def _ensure_tables_exist():
     """Ensure that necessary tables exist in BigQuery."""
     global bq_status
     if not client:
+        bq_status = "mocked"
         return
 
     try:
@@ -34,8 +35,8 @@ def _ensure_tables_exist():
             bigquery.SchemaField("user_id", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("task_name", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("deadline", "STRING", mode="NULLABLE"),
-            bigquery.SchemaField("status", "STRING", mode="NULLABLE", default_value_expression="'pending'"),
-            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE", default_value_expression="CURRENT_TIMESTAMP()"),
+            bigquery.SchemaField("status", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE"),
         ]
         task_table = bigquery.Table(f"{dataset_id}.tasks", schema=task_schema)
         client.create_table(task_table, exists_ok=True)
@@ -46,7 +47,7 @@ def _ensure_tables_exist():
             bigquery.SchemaField("content", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("summary", "STRING", mode="NULLABLE"),
             bigquery.SchemaField("action_items", "STRING", mode="NULLABLE"), # Stores JSON string
-            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE", default_value_expression="CURRENT_TIMESTAMP()"),
+            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE"),
         ]
         note_table = bigquery.Table(f"{dataset_id}.notes", schema=note_schema)
         client.create_table(note_table, exists_ok=True)
@@ -57,7 +58,7 @@ def _ensure_tables_exist():
             bigquery.SchemaField("title", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("start_time", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("end_time", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE", default_value_expression="CURRENT_TIMESTAMP()"),
+            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE"),
         ]
         event_table = bigquery.Table(f"{dataset_id}.events", schema=event_schema)
         client.create_table(event_table, exists_ok=True)
@@ -68,7 +69,7 @@ def _ensure_tables_exist():
             bigquery.SchemaField("task", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("urgency", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("suggestion", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE", default_value_expression="CURRENT_TIMESTAMP()"),
+            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE"),
         ]
         reminder_table = bigquery.Table(f"{dataset_id}.reminders", schema=reminder_schema)
         client.create_table(reminder_table, exists_ok=True)
@@ -79,7 +80,7 @@ def _ensure_tables_exist():
             bigquery.SchemaField("hashed_password", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("username", "STRING", mode="REQUIRED"),
             bigquery.SchemaField("avatar", "STRING", mode="REQUIRED"),
-            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE", default_value_expression="CURRENT_TIMESTAMP()"),
+            bigquery.SchemaField("created_at", "TIMESTAMP", mode="NULLABLE"),
         ]
         user_table = bigquery.Table(f"{dataset_id}.users", schema=user_schema)
         client.create_table(user_table, exists_ok=True)
@@ -89,8 +90,10 @@ def _ensure_tables_exist():
         # Simplify error output if running locally without GCP configured
         if "has not enabled BigQuery" in str(e) or "credentials" in str(e).lower():
             logger.warning("BigQuery is not enabled or configured for this project. Running in mock mode.")
+            bq_status = "mocked"
         else:
             logger.error(f"Error ensuring tables exist: {e}")
+            bq_status = "mocked"
 
 # Call it safely
 _ensure_tables_exist()
@@ -100,15 +103,16 @@ def get_connection_status() -> str:
     return bq_status
 
 def insert_task(user_id: str, task_name: str, deadline: str = None) -> bool:
+    import datetime
     if not client:
         logger.warning(f"Mock insert_task: {user_id}, {task_name}, {deadline}")
-        import datetime
         MOCK_TASKS.append({"user_id": user_id, "task_name": task_name, "deadline": deadline, "status": "pending", "created_at": datetime.datetime.now().isoformat()})
+        _sync_mock_data()
         return True
 
     table_ref = f"{dataset_id}.tasks"
     rows_to_insert = [
-        {"user_id": user_id, "task_name": task_name, "deadline": deadline, "status": "pending"}
+        {"user_id": user_id, "task_name": task_name, "deadline": deadline, "status": "pending", "created_at": datetime.datetime.now().isoformat()}
     ]
     try:
         errors = client.insert_rows_json(table_ref, rows_to_insert)
@@ -160,6 +164,7 @@ def update_task_status(user_id: str, task_name: str, status: str) -> bool:
         for t in MOCK_TASKS:
             if t["user_id"] == user_id and t["task_name"] == task_name:
                 t["status"] = status
+        _sync_mock_data()
         return True
 
     query = f"""
@@ -184,10 +189,11 @@ def update_task_status(user_id: str, task_name: str, status: str) -> bool:
         return False
 
 def insert_note(user_id: str, content: str, summary: str = None, action_items: str = None) -> bool:
+    import datetime
     if not client:
         logger.warning(f"Mock insert_note: {user_id}, {content}")
-        import datetime
         MOCK_NOTES.append({"user_id": user_id, "content": content, "summary": summary, "action_items": action_items, "created_at": datetime.datetime.now().isoformat()})
+        _sync_mock_data()
         return True
 
     table_ref = f"{dataset_id}.notes"
@@ -196,7 +202,8 @@ def insert_note(user_id: str, content: str, summary: str = None, action_items: s
             "user_id": user_id,
             "content": content,
             "summary": summary,
-            "action_items": action_items
+            "action_items": action_items,
+            "created_at": datetime.datetime.now().isoformat()
         }
     ]
     try:
@@ -280,10 +287,11 @@ def get_events(user_id: str) -> List[Dict[str, Any]]:
         return []
 
 def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bool:
+    import datetime
     if not client:
         logger.warning(f"Mock insert_event: {user_id}, {title}, {start_time}-{end_time}")
-        import datetime
         MOCK_EVENTS.append({"user_id": user_id, "title": title, "start_time": start_time, "end_time": end_time, "created_at": datetime.datetime.now().isoformat()})
+        _sync_mock_data()
         return True
 
     table_ref = f"{dataset_id}.events"
@@ -292,7 +300,8 @@ def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bo
             "user_id": user_id,
             "title": title,
             "start_time": start_time,
-            "end_time": end_time
+            "end_time": end_time,
+            "created_at": datetime.datetime.now().isoformat()
         }
     ]
     try:
@@ -303,10 +312,11 @@ def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bo
         return False
 
 def insert_reminder(user_id: str, task: str, urgency: str, suggestion: str) -> bool:
+    import datetime
     if not client:
         logger.warning(f"Mock insert_reminder: {user_id}, {task}, {urgency}")
-        import datetime
         MOCK_REMINDERS.append({"user_id": user_id, "task": task, "urgency": urgency, "suggestion": suggestion, "created_at": datetime.datetime.now().isoformat()})
+        _sync_mock_data()
         return True
 
     table_ref = f"{dataset_id}.reminders"
@@ -315,7 +325,8 @@ def insert_reminder(user_id: str, task: str, urgency: str, suggestion: str) -> b
             "user_id": user_id,
             "task": task,
             "urgency": urgency,
-            "suggestion": suggestion
+            "suggestion": suggestion,
+            "created_at": datetime.datetime.now().isoformat()
         }
     ]
     try:
@@ -361,15 +372,53 @@ def get_reminders(user_id: str) -> List[Dict[str, Any]]:
         logger.error(f"Failed to get reminders: {e}", exc_info=True)
         return []
 
-# In-memory store for mock data when BigQuery is not available
-MOCK_USERS = {}
-MOCK_TASKS = []
-MOCK_NOTES = []
-MOCK_EVENTS = []
-MOCK_REMINDERS = []
+import json
+import os
+
+MOCK_DB_FILE = "mock_db.json"
+
+def _load_mock_db():
+    if os.path.exists(MOCK_DB_FILE):
+        try:
+            with open(MOCK_DB_FILE, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading mock DB: {e}")
+    return {
+        "MOCK_USERS": {},
+        "MOCK_TASKS": [],
+        "MOCK_NOTES": [],
+        "MOCK_EVENTS": [],
+        "MOCK_REMINDERS": []
+    }
+
+def _save_mock_db(data):
+    try:
+        with open(MOCK_DB_FILE, "w") as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        logger.error(f"Error saving mock DB: {e}")
+
+# In-memory store for mock data when BigQuery is not available, initialized from file
+_mock_data = _load_mock_db()
+MOCK_USERS = _mock_data["MOCK_USERS"]
+MOCK_TASKS = _mock_data["MOCK_TASKS"]
+MOCK_NOTES = _mock_data["MOCK_NOTES"]
+MOCK_EVENTS = _mock_data["MOCK_EVENTS"]
+MOCK_REMINDERS = _mock_data["MOCK_REMINDERS"]
+
+def _sync_mock_data():
+    _save_mock_db({
+        "MOCK_USERS": MOCK_USERS,
+        "MOCK_TASKS": MOCK_TASKS,
+        "MOCK_NOTES": MOCK_NOTES,
+        "MOCK_EVENTS": MOCK_EVENTS,
+        "MOCK_REMINDERS": MOCK_REMINDERS
+    })
 
 def create_user(email: str, hashed_password: str, username: str, avatar: str) -> bool:
     """Inserts a new user into BigQuery. Returns True if successful, False if email already exists or error."""
+    import datetime
     if not client:
         logger.warning(f"Mock create_user: {email}")
         if email in MOCK_USERS:
@@ -378,8 +427,10 @@ def create_user(email: str, hashed_password: str, username: str, avatar: str) ->
             "email": email,
             "hashed_password": hashed_password,
             "username": username,
-            "avatar": avatar
+            "avatar": avatar,
+            "created_at": datetime.datetime.now().isoformat()
         }
+        _sync_mock_data()
         return True
 
     # Check if user already exists
@@ -389,8 +440,8 @@ def create_user(email: str, hashed_password: str, username: str, avatar: str) ->
 
     # Use DML INSERT to ensure it's immediately available
     query = f"""
-        INSERT INTO `{dataset_id}.users` (email, hashed_password, username, avatar)
-        VALUES (@email, @hashed_password, @username, @avatar)
+        INSERT INTO `{dataset_id}.users` (email, hashed_password, username, avatar, created_at)
+        VALUES (@email, @hashed_password, @username, @avatar, @created_at)
     """
     job_config = bigquery.QueryJobConfig(
         query_parameters=[
@@ -398,6 +449,7 @@ def create_user(email: str, hashed_password: str, username: str, avatar: str) ->
             bigquery.ScalarQueryParameter("hashed_password", "STRING", hashed_password),
             bigquery.ScalarQueryParameter("username", "STRING", username),
             bigquery.ScalarQueryParameter("avatar", "STRING", avatar),
+            bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", datetime.datetime.now()),
         ]
     )
 
@@ -442,6 +494,7 @@ def update_user_password(email: str, new_hashed_password: str) -> bool:
         logger.warning(f"Mock update_user_password for: {email}")
         if email in MOCK_USERS:
             MOCK_USERS[email]["hashed_password"] = new_hashed_password
+            _sync_mock_data()
             return True
         return False
 
