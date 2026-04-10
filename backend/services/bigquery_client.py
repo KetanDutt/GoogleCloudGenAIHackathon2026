@@ -102,11 +102,11 @@ def get_connection_status() -> str:
     """Returns the connection status of BigQuery."""
     return bq_status
 
-def insert_task(user_id: str, task_name: str, deadline: str = None) -> bool:
+def insert_task(user_id: str, task_name: str, deadline: str = None, status: str = "pending") -> bool:
     import datetime
     if not client:
-        logger.warning(f"Mock insert_task: {user_id}, {task_name}, {deadline}")
-        MOCK_TASKS.append({"user_id": user_id, "task_name": task_name, "deadline": deadline, "status": "pending", "created_at": datetime.datetime.now().isoformat()})
+        logger.warning(f"Mock insert_task: {user_id}, {task_name}, {deadline}, {status}")
+        MOCK_TASKS.append({"user_id": user_id, "task_name": task_name, "deadline": deadline, "status": status, "created_at": datetime.datetime.now().isoformat()})
         _sync_mock_data()
         return True
 
@@ -119,7 +119,7 @@ def insert_task(user_id: str, task_name: str, deadline: str = None) -> bool:
             bigquery.ScalarQueryParameter("user_id", "STRING", user_id),
             bigquery.ScalarQueryParameter("task_name", "STRING", task_name),
             bigquery.ScalarQueryParameter("deadline", "STRING", deadline),
-            bigquery.ScalarQueryParameter("status", "STRING", "pending"),
+            bigquery.ScalarQueryParameter("status", "STRING", status),
             bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", datetime.datetime.now()),
         ]
     )
@@ -134,11 +134,22 @@ def insert_task(user_id: str, task_name: str, deadline: str = None) -> bool:
 
 def get_tasks(user_id: str) -> List[Dict[str, Any]]:
     if not client:
-        return sorted([t for t in MOCK_TASKS if t["user_id"] == user_id], key=lambda x: x.get("created_at", ""), reverse=True)
+        # Mock deduplication logic for append-only tasks
+        user_tasks = [t for t in MOCK_TASKS if t["user_id"] == user_id]
+        latest_tasks = {}
+        for t in sorted(user_tasks, key=lambda x: x.get("created_at", "")):
+            latest_tasks[t["task_name"]] = t
+        return sorted(latest_tasks.values(), key=lambda x: x.get("created_at", ""), reverse=True)
 
     query = f"""
-        SELECT * FROM `{dataset_id}.tasks`
-        WHERE user_id = @user_id
+        SELECT * EXCEPT(rn)
+        FROM (
+            SELECT *,
+                ROW_NUMBER() OVER (PARTITION BY task_name ORDER BY created_at DESC) as rn
+            FROM `{dataset_id}.tasks`
+            WHERE user_id = @user_id
+        )
+        WHERE rn = 1
         ORDER BY created_at DESC
     """
     job_config = bigquery.QueryJobConfig(
@@ -170,38 +181,10 @@ def get_tasks(user_id: str) -> List[Dict[str, Any]]:
         return []
 
 def update_task_status(user_id: str, task_name: str, status: str) -> bool:
-    if not client:
-        logger.warning(f"Mock update_task_status: {user_id}, {task_name} -> {status}")
-        for t in MOCK_TASKS:
-            if t["user_id"] == user_id and t["task_name"] == task_name:
-                t["status"] = status
-        _sync_mock_data()
-        return True
-
-    query = f"""
-        UPDATE `{dataset_id}.tasks`
-        SET status = @status
-        WHERE user_id = @user_id AND task_name = @task_name
-    """
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("status", "STRING", status),
-            bigquery.ScalarQueryParameter("user_id", "STRING", user_id),
-            bigquery.ScalarQueryParameter("task_name", "STRING", task_name),
-        ]
-    )
-
-    try:
-        query_job = client.query(query, job_config=job_config)
-        query_job.result() # Wait for completion
-        return True
-    except Exception as e:
-        error_msg = str(e)
-        if "would affect rows in the streaming buffer" in error_msg:
-            logger.warning(f"Task status cannot be updated immediately due to BigQuery streaming buffer constraints for {user_id}, {task_name}.")
-        else:
-            logger.error(f"Failed to update task status: {e}", exc_info=True)
-        return False
+    """Updates task status by inserting a new append-only row."""
+    # Find existing deadline to carry it forward, if needed. Wait, the prompt says "None if status == 'pending' else None". But we should probably just use None.
+    # The user request said: "return insert_task(user_id, task_name, None, status)"
+    return insert_task(user_id, task_name, None, status)
 
 def insert_note(user_id: str, content: str, summary: str = None, action_items: str = None) -> bool:
     import datetime
