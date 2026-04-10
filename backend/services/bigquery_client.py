@@ -110,15 +110,26 @@ def insert_task(user_id: str, task_name: str, deadline: str = None) -> bool:
         _sync_mock_data()
         return True
 
-    table_ref = f"{dataset_id}.tasks"
-    rows_to_insert = [
-        {"user_id": user_id, "task_name": task_name, "deadline": deadline, "status": "pending", "created_at": datetime.datetime.now().isoformat()}
-    ]
+    query = f"""
+        INSERT INTO `{dataset_id}.tasks` (user_id, task_name, deadline, status, created_at)
+        VALUES (@user_id, @task_name, @deadline, @status, @created_at)
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("user_id", "STRING", user_id),
+            bigquery.ScalarQueryParameter("task_name", "STRING", task_name),
+            bigquery.ScalarQueryParameter("deadline", "STRING", deadline),
+            bigquery.ScalarQueryParameter("status", "STRING", "pending"),
+            bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", datetime.datetime.now()),
+        ]
+    )
+
     try:
-        errors = client.insert_rows_json(table_ref, rows_to_insert)
-        return not errors
-    except GoogleAPIError as e:
-        logger.error(f"Failed to insert task: {e}")
+        query_job = client.query(query, job_config=job_config)
+        query_job.result()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to insert task: {e}", exc_info=True)
         return False
 
 def get_tasks(user_id: str) -> List[Dict[str, Any]]:
@@ -196,21 +207,26 @@ def insert_note(user_id: str, content: str, summary: str = None, action_items: s
         _sync_mock_data()
         return True
 
-    table_ref = f"{dataset_id}.notes"
-    rows_to_insert = [
-        {
-            "user_id": user_id,
-            "content": content,
-            "summary": summary,
-            "action_items": action_items,
-            "created_at": datetime.datetime.now().isoformat()
-        }
-    ]
+    query = f"""
+        INSERT INTO `{dataset_id}.notes` (user_id, content, summary, action_items, created_at)
+        VALUES (@user_id, @content, @summary, @action_items, @created_at)
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("user_id", "STRING", user_id),
+            bigquery.ScalarQueryParameter("content", "STRING", content),
+            bigquery.ScalarQueryParameter("summary", "STRING", summary),
+            bigquery.ScalarQueryParameter("action_items", "STRING", action_items),
+            bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", datetime.datetime.now()),
+        ]
+    )
+
     try:
-        errors = client.insert_rows_json(table_ref, rows_to_insert)
-        return not errors
-    except GoogleAPIError as e:
-        logger.error(f"Failed to insert note: {e}")
+        query_job = client.query(query, job_config=job_config)
+        query_job.result()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to insert note: {e}", exc_info=True)
         return False
 
 def get_notes(user_id: str) -> List[Dict[str, Any]]:
@@ -294,21 +310,26 @@ def insert_event(user_id: str, title: str, start_time: str, end_time: str) -> bo
         _sync_mock_data()
         return True
 
-    table_ref = f"{dataset_id}.events"
-    rows_to_insert = [
-        {
-            "user_id": user_id,
-            "title": title,
-            "start_time": start_time,
-            "end_time": end_time,
-            "created_at": datetime.datetime.now().isoformat()
-        }
-    ]
+    query = f"""
+        INSERT INTO `{dataset_id}.events` (user_id, title, start_time, end_time, created_at)
+        VALUES (@user_id, @title, @start_time, @end_time, @created_at)
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("user_id", "STRING", user_id),
+            bigquery.ScalarQueryParameter("title", "STRING", title),
+            bigquery.ScalarQueryParameter("start_time", "STRING", start_time),
+            bigquery.ScalarQueryParameter("end_time", "STRING", end_time),
+            bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", datetime.datetime.now()),
+        ]
+    )
+
     try:
-        errors = client.insert_rows_json(table_ref, rows_to_insert)
-        return not errors
-    except GoogleAPIError as e:
-        logger.error(f"Failed to insert event: {e}")
+        query_job = client.query(query, job_config=job_config)
+        query_job.result()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to insert event: {e}", exc_info=True)
         return False
 
 def insert_reminder(user_id: str, task: str, urgency: str, suggestion: str) -> bool:
@@ -319,21 +340,26 @@ def insert_reminder(user_id: str, task: str, urgency: str, suggestion: str) -> b
         _sync_mock_data()
         return True
 
-    table_ref = f"{dataset_id}.reminders"
-    rows_to_insert = [
-        {
-            "user_id": user_id,
-            "task": task,
-            "urgency": urgency,
-            "suggestion": suggestion,
-            "created_at": datetime.datetime.now().isoformat()
-        }
-    ]
+    query = f"""
+        INSERT INTO `{dataset_id}.reminders` (user_id, task, urgency, suggestion, created_at)
+        VALUES (@user_id, @task, @urgency, @suggestion, @created_at)
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("user_id", "STRING", user_id),
+            bigquery.ScalarQueryParameter("task", "STRING", task),
+            bigquery.ScalarQueryParameter("urgency", "STRING", urgency),
+            bigquery.ScalarQueryParameter("suggestion", "STRING", suggestion),
+            bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", datetime.datetime.now()),
+        ]
+    )
+
     try:
-        errors = client.insert_rows_json(table_ref, rows_to_insert)
-        return not errors
-    except GoogleAPIError as e:
-        logger.error(f"Failed to insert reminder: {e}")
+        query_job = client.query(query, job_config=job_config)
+        query_job.result()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to insert reminder: {e}", exc_info=True)
         return False
 
 def get_reminders(user_id: str) -> List[Dict[str, Any]]:

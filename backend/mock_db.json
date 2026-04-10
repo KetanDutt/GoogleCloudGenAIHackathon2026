@@ -1,0 +1,15 @@
+{
+    "MOCK_USERS": {},
+    "MOCK_TASKS": [
+        {
+            "user_id": "test_dml_user",
+            "task_name": "Test DML Task",
+            "deadline": "2024-12-31",
+            "status": "completed",
+            "created_at": "2026-04-10T08:59:19.318233"
+        }
+    ],
+    "MOCK_NOTES": [],
+    "MOCK_EVENTS": [],
+    "MOCK_REMINDERS": []
+}
