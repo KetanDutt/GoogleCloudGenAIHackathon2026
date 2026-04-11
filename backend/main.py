@@ -8,9 +8,9 @@ from fastapi.security import OAuth2PasswordBearer
 from typing import List, Dict, Any
 from datetime import timedelta
 
-from models.schemas import ChatRequest, ChatResponse, TaskCompleteRequest, UserCreate, UserLogin, TokenResponse, UserResponse
+from models.schemas import ChatRequest, ChatResponse, TaskCompleteRequest, UserCreate, UserLogin, TokenResponse, UserResponse, TaskEditRequest, TaskDeleteRequest, NoteEditRequest, NoteDeleteRequest
 from services.auth_service import get_password_hash, verify_password, create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from services.bigquery_client import create_user, get_user_by_email
+from services.bigquery_client import create_user, get_user_by_email, edit_task, delete_task, edit_note, delete_note
 from services.workflow import process_chat_workflow
 
 from tools.task_tools import list_tasks, complete_task_status
@@ -132,11 +132,39 @@ async def complete_task_endpoint(request: TaskCompleteRequest, current_user: str
         raise HTTPException(status_code=500, detail="Failed to complete task")
     return {"message": "Task completed successfully"}
 
+@app.put("/tasks/edit")
+async def edit_task_endpoint(request: TaskEditRequest, current_user: str = Depends(get_current_user_email)):
+    success = await asyncio.to_thread(edit_task, current_user, request.task_id, request.name, request.deadline)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to edit task")
+    return {"message": "Task edited successfully"}
+
+@app.delete("/tasks/delete")
+async def delete_task_endpoint(request: TaskDeleteRequest, current_user: str = Depends(get_current_user_email)):
+    success = await asyncio.to_thread(delete_task, current_user, request.task_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete task")
+    return {"message": "Task deleted successfully"}
+
 @app.get("/notes", response_model=List[Dict[str, Any]])
 async def get_notes_endpoint(current_user: str = Depends(get_current_user_email)):
     """Returns user notes."""
     notes = await asyncio.to_thread(fetch_notes, current_user)
     return notes
+
+@app.put("/notes/edit")
+async def edit_note_endpoint(request: NoteEditRequest, current_user: str = Depends(get_current_user_email)):
+    success = await asyncio.to_thread(edit_note, current_user, request.note_id, request.content)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to edit note")
+    return {"message": "Note edited successfully"}
+
+@app.delete("/notes/delete")
+async def delete_note_endpoint(request: NoteDeleteRequest, current_user: str = Depends(get_current_user_email)):
+    success = await asyncio.to_thread(delete_note, current_user, request.note_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete note")
+    return {"message": "Note deleted successfully"}
 
 @app.get("/reminders", response_model=List[Dict[str, Any]])
 async def get_reminders_endpoint(current_user: str = Depends(get_current_user_email)):

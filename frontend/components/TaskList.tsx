@@ -2,13 +2,16 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useAppStore } from "@/store/useAppStore";
-import { CheckCircle2, Clock, RotateCw, Calendar, Check } from "lucide-react";
+import { CheckCircle2, Clock, RotateCw, Calendar, Check, Edit2, Trash2, X, Save } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 
 export default function TaskList() {
-  const { tasks, loadTasks, isLoading, completeTask } = useAppStore();
+  const { tasks, loadTasks, isLoading, completeTask, editTask, deleteTask } = useAppStore();
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDeadline, setEditDeadline] = useState("");
 
   useEffect(() => {
     loadTasks();
@@ -59,6 +62,53 @@ export default function TaskList() {
           <AnimatePresence>
             {filteredTasks.map((task, index) => {
               const isCompleted = task.status === 'completed';
+              const isEditing = editingTaskId === task.task_name;
+
+              if (isEditing) {
+                return (
+                  <motion.div
+                    key={task.id || task.task_name + index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="p-4 rounded-xl border border-indigo-200 bg-white shadow-sm dark:bg-zinc-800 dark:border-indigo-500/50 flex flex-col gap-3"
+                  >
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 border rounded-md dark:bg-zinc-900 dark:border-zinc-700 dark:text-white"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Task name"
+                    />
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="datetime-local"
+                        className="flex-1 px-3 py-2 border rounded-md dark:bg-zinc-900 dark:border-zinc-700 dark:text-white"
+                        value={editDeadline}
+                        onChange={(e) => setEditDeadline(e.target.value)}
+                      />
+                      <button
+                        onClick={() => {
+                          if (editName.trim() !== "") {
+                            editTask(task.task_name, editName, editDeadline ? new Date(editDeadline).toISOString() : undefined);
+                          }
+                          setEditingTaskId(null);
+                        }}
+                        className="p-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
+                      >
+                        <Save className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setEditingTaskId(null)}
+                        className="p-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              }
+
               return (
                 <motion.div
                   key={task.id || task.task_name + index}
@@ -87,29 +137,52 @@ export default function TaskList() {
                       <Check className={clsx("w-3.5 h-3.5", isCompleted ? "text-white opacity-100" : "text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity")} />
                     </button>
                   </div>
-                  <div className="flex-1">
-                    <h3 className={clsx(
-                      "font-medium transition-colors",
-                      isCompleted ? "text-gray-500 line-through dark:text-gray-500" : "text-gray-800 dark:text-gray-200"
-                    )}>
-                      {task.task_name}
-                    </h3>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                      {task.deadline && !isNaN(new Date(task.deadline).getTime()) && (
-                        <span className={clsx(
-                          "flex items-center gap-1 px-2 py-1 rounded-md",
-                          isCompleted ? "bg-transparent text-gray-400" : "bg-gray-100 dark:bg-zinc-700"
-                        )}>
-                          <Clock className="w-3 h-3" />
-                          Deadline: {new Date(task.deadline).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                        </span>
-                      )}
-                      {task.created_at && !isNaN(new Date(task.created_at).getTime()) && (
-                        <span className="flex items-center gap-1 opacity-70">
-                          Created: {new Date(task.created_at).toLocaleDateString()}
-                        </span>
-                      )}
+                  <div className="flex-1 flex justify-between items-start">
+                    <div>
+                      <h3 className={clsx(
+                        "font-medium transition-colors",
+                        isCompleted ? "text-gray-500 line-through dark:text-gray-500" : "text-gray-800 dark:text-gray-200"
+                      )}>
+                        {task.task_name}
+                      </h3>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                        {task.deadline && !isNaN(new Date(task.deadline).getTime()) && (
+                          <span className={clsx(
+                            "flex items-center gap-1 px-2 py-1 rounded-md",
+                            isCompleted ? "bg-transparent text-gray-400" : "bg-gray-100 dark:bg-zinc-700"
+                          )}>
+                            <Clock className="w-3 h-3" />
+                            Deadline: {new Date(task.deadline).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        )}
+                        {task.created_at && !isNaN(new Date(task.created_at).getTime()) && (
+                          <span className="flex items-center gap-1 opacity-70">
+                            Created: {new Date(task.created_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
+
+                    {!isCompleted && (
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => {
+                            setEditingTaskId(task.task_name);
+                            setEditName(task.task_name);
+                            setEditDeadline(task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : "");
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteTask(task.task_name)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               );

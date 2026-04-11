@@ -59,3 +59,18 @@ class Event(BaseModel):
     start_time: str
     end_time: str
     created_at: Optional[str] = None
+
+class TaskEditRequest(BaseModel):
+    task_id: str
+    name: Optional[str] = None
+    deadline: Optional[str] = None
+
+class TaskDeleteRequest(BaseModel):
+    task_id: str
+
+class NoteEditRequest(BaseModel):
+    note_id: str
+    content: str
+
+class NoteDeleteRequest(BaseModel):
+    note_id: str

@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useAppStore } from "@/store/useAppStore";
-import { StickyNote, RotateCw, RefreshCcw } from "lucide-react";
+import { StickyNote, RotateCw, RefreshCcw, Edit2, Trash2, X, Save } from "lucide-react";
 import clsx from "clsx";
 
 export default function NotesPanel() {
-  const { notes, loadNotes, isLoading } = useAppStore();
+  const { notes, loadNotes, isLoading, editNote, deleteNote } = useAppStore();
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
 
   useEffect(() => {
     loadNotes();
@@ -58,49 +60,106 @@ export default function NotesPanel() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredNotes.map((note, idx) => (
-            <div
-              key={note.id || idx}
-              className="p-5 rounded-2xl border border-gray-100 bg-gray-50/50 hover:shadow-md transition-shadow dark:bg-zinc-800/50 dark:border-zinc-700"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <span className="text-xs text-gray-500 font-medium bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full dark:bg-emerald-900/50 dark:text-emerald-300">
-                  {note.created_at && !isNaN(new Date(note.created_at).getTime()) ? new Date(note.created_at).toLocaleDateString() : "Unknown Date"}
-                </span>
-              </div>
+          {filteredNotes.map((note, idx) => {
+            const isEditing = editingNoteId === note.content;
 
-              {note.summary && (
-                <div className="mb-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1 dark:text-gray-300">
-                    <RefreshCcw className="w-3.5 h-3.5" /> Summary
-                  </h4>
-                  <p className="text-sm text-gray-600 leading-relaxed dark:text-gray-400">
-                    {note.summary}
+            if (isEditing) {
+              return (
+                <div
+                  key={note.id || idx}
+                  className="p-5 rounded-2xl border border-emerald-200 bg-white shadow-sm dark:bg-zinc-800 dark:border-emerald-500/50 flex flex-col gap-3"
+                >
+                  <textarea
+                    className="w-full px-3 py-2 border rounded-md min-h-[100px] dark:bg-zinc-900 dark:border-zinc-700 dark:text-white"
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    placeholder="Note content..."
+                  />
+                  <div className="flex items-center gap-3 mt-auto">
+                    <button
+                      onClick={() => {
+                        if (editContent.trim() !== "") {
+                          editNote(note.content, editContent);
+                        }
+                        setEditingNoteId(null);
+                      }}
+                      className="p-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 transition-colors flex-1 flex justify-center items-center gap-1"
+                    >
+                      <Save className="w-4 h-4" /> Save
+                    </button>
+                    <button
+                      onClick={() => setEditingNoteId(null)}
+                      className="p-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                key={note.id || idx}
+                className="group p-5 rounded-2xl border border-gray-100 bg-gray-50/50 hover:shadow-md transition-shadow dark:bg-zinc-800/50 dark:border-zinc-700"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <span className="text-xs text-gray-500 font-medium bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full dark:bg-emerald-900/50 dark:text-emerald-300">
+                    {note.created_at && !isNaN(new Date(note.created_at).getTime()) ? new Date(note.created_at).toLocaleDateString() : "Unknown Date"}
+                  </span>
+
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => {
+                        setEditingNoteId(note.content);
+                        setEditContent(note.content);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => deleteNote(note.content)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {note.summary && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1 dark:text-gray-300">
+                      <RefreshCcw className="w-3.5 h-3.5" /> Summary
+                    </h4>
+                    <p className="text-sm text-gray-600 leading-relaxed dark:text-gray-400">
+                      {note.summary}
+                    </p>
+                  </div>
+                )}
+
+                {note.action_items && note.action_items.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2 dark:text-gray-300">Action Items</h4>
+                    <ul className="space-y-2">
+                      {note.action_items.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {!note.summary && (!note.action_items || note.action_items.length === 0) && (
+                  <p className="text-sm text-gray-500 italic mt-2 line-clamp-3">
+                    {note.content}
                   </p>
-                </div>
-              )}
-
-              {note.action_items && note.action_items.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2 dark:text-gray-300">Action Items</h4>
-                  <ul className="space-y-2">
-                    {note.action_items.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {!note.summary && (!note.action_items || note.action_items.length === 0) && (
-                <p className="text-sm text-gray-500 italic mt-2 line-clamp-3">
-                  {note.content}
-                </p>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

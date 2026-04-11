@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageSquare, CheckSquare, StickyNote, LayoutDashboard, LogOut } from "lucide-react";
+import { MessageSquare, CheckSquare, StickyNote, LayoutDashboard, LogOut, Calendar } from "lucide-react";
 import clsx from "clsx";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/chat", label: "AI Chat", icon: MessageSquare },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/notes", label: "Notes", icon: StickyNote },
+  { href: "/calendar", label: "Calendar", icon: Calendar },
 ];
 
 const AVATARS: Record<string, string> = {
