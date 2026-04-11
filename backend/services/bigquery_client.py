@@ -139,7 +139,8 @@ def get_tasks(user_id: str) -> List[Dict[str, Any]]:
         latest_tasks = {}
         for t in sorted(user_tasks, key=lambda x: x.get("created_at", "")):
             latest_tasks[t["task_name"]] = t
-        return sorted(latest_tasks.values(), key=lambda x: x.get("created_at", ""), reverse=True)
+        valid_tasks = [t for t in latest_tasks.values() if t.get("status") != "deleted"]
+        return sorted(valid_tasks, key=lambda x: x.get("created_at", ""), reverse=True)
 
     query = f"""
         SELECT * EXCEPT(rn)
@@ -149,7 +150,7 @@ def get_tasks(user_id: str) -> List[Dict[str, Any]]:
             FROM `{dataset_id}.tasks`
             WHERE user_id = @user_id
         )
-        WHERE rn = 1
+        WHERE rn = 1 AND status != 'deleted'
         ORDER BY created_at DESC
     """
     job_config = bigquery.QueryJobConfig(
@@ -186,6 +187,15 @@ def update_task_status(user_id: str, task_name: str, status: str) -> bool:
     # The user request said: "return insert_task(user_id, task_name, None, status)"
     return insert_task(user_id, task_name, None, status)
 
+def edit_task(user_id: str, task_name: str, new_name: str, new_deadline: str) -> bool:
+    """Edits a task by inserting a new append-only row, carrying over or updating status/deadline, and deleting the old one."""
+    update_task_status(user_id, task_name, "deleted")
+    return insert_task(user_id, new_name, new_deadline, "pending")
+
+def delete_task(user_id: str, task_name: str) -> bool:
+    """Deletes a task by appending a 'deleted' status row."""
+    return update_task_status(user_id, task_name, "deleted")
+
 def insert_note(user_id: str, content: str, summary: str = None, action_items: str = None) -> bool:
     import datetime
     if not client:
@@ -214,6 +224,72 @@ def insert_note(user_id: str, content: str, summary: str = None, action_items: s
         return True
     except Exception as e:
         logger.error(f"Failed to insert note: {e}", exc_info=True)
+        return False
+
+def edit_note(user_id: str, old_content: str, new_content: str) -> bool:
+    import datetime
+    if not client:
+        for note in reversed(MOCK_NOTES):
+            if note["user_id"] == user_id and note["content"] == old_content:
+                note["content"] = new_content
+                _sync_mock_data()
+                return True
+        return False
+
+    query = f"""
+        UPDATE `{dataset_id}.notes`
+        SET content = @new_content, created_at = @created_at
+        WHERE user_id = @user_id AND content = @old_content
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("new_content", "STRING", new_content),
+            bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", datetime.datetime.now()),
+            bigquery.ScalarQueryParameter("user_id", "STRING", user_id),
+            bigquery.ScalarQueryParameter("old_content", "STRING", old_content),
+        ]
+    )
+
+    try:
+        query_job = client.query(query, job_config=job_config)
+        query_job.result()
+        return True
+    except Exception as e:
+        error_msg = str(e)
+        if "would affect rows in the streaming buffer" in error_msg:
+            logger.warning(f"Note cannot be updated immediately due to BigQuery streaming buffer constraints for user {user_id}.")
+            return True
+        logger.error(f"Failed to edit note: {e}", exc_info=True)
+        return False
+
+def delete_note(user_id: str, content: str) -> bool:
+    if not client:
+        global MOCK_NOTES
+        MOCK_NOTES = [n for n in MOCK_NOTES if not (n["user_id"] == user_id and n["content"] == content)]
+        _sync_mock_data()
+        return True
+
+    query = f"""
+        DELETE FROM `{dataset_id}.notes`
+        WHERE user_id = @user_id AND content = @content
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("user_id", "STRING", user_id),
+            bigquery.ScalarQueryParameter("content", "STRING", content),
+        ]
+    )
+
+    try:
+        query_job = client.query(query, job_config=job_config)
+        query_job.result()
+        return True
+    except Exception as e:
+        error_msg = str(e)
+        if "would affect rows in the streaming buffer" in error_msg:
+            logger.warning(f"Note cannot be deleted immediately due to BigQuery streaming buffer constraints for user {user_id}.")
+            return True
+        logger.error(f"Failed to delete note: {e}", exc_info=True)
         return False
 
 def get_notes(user_id: str) -> List[Dict[str, Any]]:

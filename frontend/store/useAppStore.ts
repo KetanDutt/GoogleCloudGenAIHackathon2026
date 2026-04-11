@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI, fetchHealth, fetchUserMeAPI, fetchModelsAPI, fetchEvents } from '../lib/api';
+import { sendChatRequest, fetchTasks, fetchNotes, completeTaskAPI, editTaskAPI, deleteTaskAPI, editNoteAPI, deleteNoteAPI, fetchHealth, fetchUserMeAPI, fetchModelsAPI, fetchEvents } from '../lib/api';
 import toast from 'react-hot-toast';
 
 export interface User {
@@ -73,6 +73,10 @@ interface AppState {
   loadNotes: () => Promise<void>;
   loadEvents: () => Promise<void>;
   completeTask: (taskName: string) => Promise<void>;
+  editTask: (taskId: string, name?: string, deadline?: string) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  editNote: (noteId: string, content: string) => Promise<void>;
+  deleteNote: (noteId: string) => Promise<void>;
   loadHealth: () => Promise<void>;
   loadModels: () => Promise<void>;
   setSelectedModel: (model: string) => void;
@@ -101,6 +105,62 @@ export const useAppStore = create<AppState>((set, get) => ({
     } else {
       localStorage.removeItem('token');
       set({ token, user: null });
+    }
+  },
+
+  editTask: async (taskId: string, name?: string, deadline?: string) => {
+    try {
+      set((state) => ({
+        tasks: state.tasks.map((t) =>
+          t.task_name === taskId ? { ...t, task_name: name || t.task_name, deadline: deadline || t.deadline } : t
+        )
+      }));
+      await editTaskAPI(taskId, name, deadline);
+    } catch (error) {
+      console.error('Failed to edit task:', error);
+      const tasks = await fetchTasks();
+      set({ tasks });
+    }
+  },
+
+  deleteTask: async (taskId: string) => {
+    try {
+      set((state) => ({
+        tasks: state.tasks.filter((t) => t.task_name !== taskId)
+      }));
+      await deleteTaskAPI(taskId);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      const tasks = await fetchTasks();
+      set({ tasks });
+    }
+  },
+
+  editNote: async (noteId: string, content: string) => {
+    try {
+      set((state) => ({
+        notes: state.notes.map((n) =>
+          n.content === noteId ? { ...n, content: content } : n
+        )
+      }));
+      await editNoteAPI(noteId, content);
+    } catch (error) {
+      console.error('Failed to edit note:', error);
+      const notes = await fetchNotes();
+      set({ notes });
+    }
+  },
+
+  deleteNote: async (noteId: string) => {
+    try {
+      set((state) => ({
+        notes: state.notes.filter((n) => n.content !== noteId)
+      }));
+      await deleteNoteAPI(noteId);
+    } catch (error) {
+      console.error('Failed to delete note:', error);
+      const notes = await fetchNotes();
+      set({ notes });
     }
   },
 

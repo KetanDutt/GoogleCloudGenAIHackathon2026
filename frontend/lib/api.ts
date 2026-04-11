@@ -93,6 +93,26 @@ export const completeTaskAPI = async (taskName: string) => {
   return response.data;
 };
 
+export const editTaskAPI = async (taskId: string, name?: string, deadline?: string) => {
+  const response = await api.put('/tasks/edit', { task_id: taskId, name, deadline });
+  return response.data;
+};
+
+export const deleteTaskAPI = async (taskId: string) => {
+  const response = await api.delete('/tasks/delete', { data: { task_id: taskId } });
+  return response.data;
+};
+
+export const editNoteAPI = async (noteId: string, content: string) => {
+  const response = await api.put('/notes/edit', { note_id: noteId, content });
+  return response.data;
+};
+
+export const deleteNoteAPI = async (noteId: string) => {
+  const response = await api.delete('/notes/delete', { data: { note_id: noteId } });
+  return response.data;
+};
+
 export const fetchHealth = async () => {
   const response = await api.get('/health');
   return response.data;
