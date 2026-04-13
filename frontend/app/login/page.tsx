@@ -14,11 +14,13 @@ export default function LoginPage() {
   const router = useRouter();
   const setToken = useAppStore((state) => state.setToken);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const testEmail = process.env.NEXT_PUBLIC_TEST_EMAIL;
+  const testPassword = process.env.NEXT_PUBLIC_TEST_PASSWORD;
+
+  const handleLogin = async (loginEmail: string, loginPassword: string) => {
     setLoading(true);
     try {
-      const data = await loginAPI(email, password);
+      const data = await loginAPI(loginEmail, loginPassword);
       setToken(data.access_token);
       toast.success("Logged in successfully");
       router.push("/");
@@ -31,6 +33,11 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleLogin(email, password);
   };
 
   return (
@@ -91,6 +98,30 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
+
+        {testEmail && testPassword && (
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-zinc-800">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+              Test Account Details
+            </h3>
+            <div className="bg-gray-50 dark:bg-zinc-800 rounded-md p-3 text-sm text-gray-700 dark:text-gray-300 mb-4 font-mono">
+              <div><span className="font-semibold">Email:</span> {testEmail}</div>
+              <div><span className="font-semibold">Password:</span> {testPassword}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail(testEmail);
+                setPassword(testPassword);
+                handleLogin(testEmail, testPassword);
+              }}
+              disabled={loading}
+              className="flex w-full justify-center rounded-md bg-zinc-200 dark:bg-zinc-700 px-3 py-2.5 text-sm font-semibold text-gray-900 dark:text-white hover:bg-zinc-300 dark:hover:bg-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-500 disabled:opacity-50"
+            >
+              Login with Test Account
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
