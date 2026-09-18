@@ -359,6 +359,9 @@ test("key screens and dialogs meet automated accessibility checks", async ({
   expect(results.violations).toEqual([]);
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await expect(page.getByLabel("Title", { exact: true })).toBeFocused();
+  // Measure settled colors, not translucent frames of the dialog's entrance fade.
+  await expect(page.getByRole("dialog")).toHaveCSS("opacity", "1");
+  await expect(page.locator(".modal-overlay")).toHaveCSS("opacity", "1");
   results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
     .analyze();
