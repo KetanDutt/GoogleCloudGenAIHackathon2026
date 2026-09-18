@@ -1,42 +1,44 @@
-from agents.agent_utils import call_llm_with_retry
 import re
-import logging
 
-logger = logging.getLogger(__name__)
+from pydantic import Field
 
-def generate_tasks(goal: str, model_name: str = "gemini-2.5-flash") -> list[str]:
-    """
-    Generates an actionable bullet-point list of tasks from a goal.
-    """
-    prompt = f"""
-    You are a Planner Agent. Your job is to break down a user's goal into smaller, actionable tasks.
+from backend.agents.agent_utils import agent_prompt
+from backend.models.schemas import Proposal, Schema, TaskCreate
 
-    Goal: "{goal}"
 
-    Return ONLY a clean bullet list of tasks where each task is on a new line and starts with a dash (-).
-    Keep tasks concise and actionable.
-    """
+class TaskPlan(Schema):
+    message: str = Field(min_length=1, max_length=3000)
+    tasks: list[TaskCreate] = Field(max_length=8)
 
-    def parse_tasks(response: str) -> list[str]:
-        tasks = []
-        for line in response.split('\n'):
-            line = line.strip()
-            if line.startswith('-') or line.startswith('*'):
-                tasks.append(re.sub(r'^[-\*]\s*', '', line))
 
-        if not tasks:
-             # Try splitting by new lines if bullets were missed
-             tasks = [t.strip() for t in response.split('\n') if t.strip()]
-
-        if not tasks:
-             raise ValueError("Could not extract any tasks from the response.")
-
-        return tasks
-
-    return call_llm_with_retry(
-        prompt=prompt,
-        model_name=model_name,
-        parse_func=parse_tasks,
-        fallback_value=[f"Complete goal: {goal}"],
-        clarification_prompt_template="The previous response was not a valid bulleted list. Please provide a simple list of tasks starting with dashes (-). Original request: {prompt}"
+def generate_tasks(client, text: str, timezone: str, model: str) -> Proposal:
+    if client.settings.ai_mode == "demo":
+        goal = re.sub(r"^(add|create|save)\s+(a\s+)?task\s*:?\s*", "", text, flags=re.I).strip()
+        if not goal:
+            return Proposal(
+                message="What would you like to get done? Add a task title and I can prepare it for review."
+            )
+        explicit_task = re.match(r"^(add|create|save)\s+(a\s+)?task\b", text, re.I)
+        if not explicit_task and re.search(r"\b(plan|break down)\b", goal, re.I):
+            titles = [
+                f"Define the next step: {goal[:150]}",
+                "Set aside a focused work session",
+                "Review progress and choose the next action",
+            ]
+        else:
+            titles = [goal[:200]]
+        return Proposal(
+            message="Here is a demo task template for you to review. Dates are left unset rather than guessed. Nothing is saved until you confirm.",
+            tasks=[TaskCreate(title=title) for title in titles],
+        )
+    result = client.generate(
+        agent_prompt(
+            "Planner Agent",
+            "Propose 1–8 concise actionable tasks. For an explicit single-task request, return one task only. Only assign a due date when the user specifies one; otherwise use null. Do not automatically create calendar events.",
+            text,
+            timezone,
+        ),
+        TaskPlan,
+        model,
     )
+    return Proposal(message=result.message, tasks=result.tasks)

@@ -1,0 +1,5185 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AI Personal Operations Manager",
+    "description": "A private workspace with review-before-save agent proposals.",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Register",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Register"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/session": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Session Info",
+        "operationId": "session_info_api_v1_auth_session_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/demo": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Demo",
+        "operationId": "demo_api_v1_auth_demo_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Profile",
+        "operationId": "profile_api_v1_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Delete Account",
+        "operationId": "delete_account_api_v1_users_me_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccount"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Update Profile",
+        "operationId": "update_profile_api_v1_users_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks": {
+      "get": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Tasks",
+        "operationId": "tasks_api_v1_tasks_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "completed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Priority"
+            }
+          },
+          {
+            "name": "overdue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Overdue"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TaskResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Add Task",
+        "operationId": "add_task_api_v1_tasks_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/{record_id}": {
+      "patch": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Edit Task",
+        "operationId": "edit_task_api_v1_tasks__record_id__patch",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Record Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Delete Task",
+        "operationId": "delete_task_api_v1_tasks__record_id__delete",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Record Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Version"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notes": {
+      "get": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Notes",
+        "operationId": "notes_api_v1_notes_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "default": "",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_NoteResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Add Note",
+        "operationId": "add_note_api_v1_notes_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ]
+      }
+    },
+    "/api/v1/notes/{record_id}": {
+      "patch": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Edit Note",
+        "operationId": "edit_note_api_v1_notes__record_id__patch",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Record Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Delete Note",
+        "operationId": "delete_note_api_v1_notes__record_id__delete",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Record Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Version"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/events": {
+      "get": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Events",
+        "operationId": "events_api_v1_events_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "from_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Time"
+            }
+          },
+          {
+            "name": "to_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_EventResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Add Event",
+        "operationId": "add_event_api_v1_events_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ]
+      }
+    },
+    "/api/v1/events/{record_id}": {
+      "patch": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Edit Event",
+        "operationId": "edit_event_api_v1_events__record_id__patch",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Record Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Delete Event",
+        "operationId": "delete_event_api_v1_events__record_id__delete",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Record Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Version"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/reminders": {
+      "get": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Reminders",
+        "operationId": "reminders_api_v1_reminders_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "completed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ReminderResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Add Reminder",
+        "operationId": "add_reminder_api_v1_reminders_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ]
+      }
+    },
+    "/api/v1/reminders/{record_id}": {
+      "patch": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Edit Reminder",
+        "operationId": "edit_reminder_api_v1_reminders__record_id__patch",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Record Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Delete Reminder",
+        "operationId": "delete_reminder_api_v1_reminders__record_id__delete",
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Record Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Version"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": [
+          "Workspace"
+        ],
+        "summary": "Dashboard",
+        "operationId": "dashboard_api_v1_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat": {
+      "get": {
+        "tags": [
+          "Assistant"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_chat_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_ChatResponse_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Assistant"
+        ],
+        "summary": "Chat",
+        "operationId": "chat_api_v1_chat_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Assistant"
+        ],
+        "summary": "Clear History",
+        "operationId": "clear_history_api_v1_chat_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/{run_id}/apply": {
+      "post": {
+        "tags": [
+          "Assistant"
+        ],
+        "summary": "Apply Proposal",
+        "operationId": "apply_proposal_api_v1_chat__run_id__apply_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/{run_id}/discard": {
+      "post": {
+        "tags": [
+          "Assistant"
+        ],
+        "summary": "Discard Proposal",
+        "operationId": "discard_proposal_api_v1_chat__run_id__discard_post",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Use the csrf_token returned by /auth/session. Never store the session cookie in JavaScript."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/export": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Export Data",
+        "operationId": "export_data_api_v1_users_me_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Sign-in required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid CSRF token or origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Item not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict or stale version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "CookieSession": []
+          }
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Readiness",
+        "operationId": "readiness_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "System Status",
+        "operationId": "system_status_api_v1_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafeError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgentTraceStep": {
+        "properties": {
+          "step": {
+            "type": "string",
+            "title": "Step"
+          },
+          "details": {
+            "type": "string",
+            "title": "Details"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "step",
+          "details"
+        ],
+        "title": "AgentTraceStep"
+      },
+      "ChatRequest": {
+        "properties": {
+          "user_input": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "User Input"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_input",
+          "request_id"
+        ],
+        "title": "ChatRequest"
+      },
+      "ChatResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "user_input": {
+            "type": "string",
+            "title": "User Input"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "intent": {
+            "type": "string",
+            "enum": [
+              "planner",
+              "notes",
+              "calendar",
+              "reminder",
+              "general"
+            ],
+            "title": "Intent"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "demo",
+              "vertex"
+            ],
+            "title": "Mode"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "applied",
+              "discarded",
+              "info"
+            ],
+            "title": "Status"
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/Proposal"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/AgentTraceStep"
+            },
+            "type": "array",
+            "title": "Trace"
+          },
+          "applied_ids": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Applied Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "version",
+          "user_input",
+          "request_id",
+          "intent",
+          "mode",
+          "model",
+          "status",
+          "proposal",
+          "trace",
+          "applied_ids"
+        ],
+        "title": "ChatResponse"
+      },
+      "DashboardCounts": {
+        "properties": {
+          "tasks": {
+            "type": "integer",
+            "title": "Tasks"
+          },
+          "completed": {
+            "type": "integer",
+            "title": "Completed"
+          },
+          "pending": {
+            "type": "integer",
+            "title": "Pending"
+          },
+          "overdue": {
+            "type": "integer",
+            "title": "Overdue"
+          },
+          "notes": {
+            "type": "integer",
+            "title": "Notes"
+          },
+          "reminders": {
+            "type": "integer",
+            "title": "Reminders"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tasks",
+          "completed",
+          "pending",
+          "overdue",
+          "notes",
+          "reminders"
+        ],
+        "title": "DashboardCounts"
+      },
+      "DashboardResponse": {
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/DashboardCounts"
+          },
+          "focus_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskResponse"
+            },
+            "type": "array",
+            "title": "Focus Tasks"
+          },
+          "upcoming_events": {
+            "items": {
+              "$ref": "#/components/schemas/EventResponse"
+            },
+            "type": "array",
+            "title": "Upcoming Events"
+          },
+          "recent_notes": {
+            "items": {
+              "$ref": "#/components/schemas/NoteResponse"
+            },
+            "type": "array",
+            "title": "Recent Notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "counts",
+          "focus_tasks",
+          "upcoming_events",
+          "recent_notes"
+        ],
+        "title": "DashboardResponse"
+      },
+      "DeleteAccount": {
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Current Password",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DeleteAccount"
+      },
+      "EventCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Time"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "start_time",
+          "end_time"
+        ],
+        "title": "EventCreate"
+      },
+      "EventResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Time"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "version",
+          "title",
+          "start_time",
+          "end_time"
+        ],
+        "title": "EventResponse"
+      },
+      "EventUpdate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "start_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Time"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Description",
+            "default": ""
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "start_time",
+          "end_time",
+          "version"
+        ],
+        "title": "EventUpdate"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Login": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "Login"
+      },
+      "NoteCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Content"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "content"
+        ],
+        "title": "NoteCreate"
+      },
+      "NoteResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Content"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "action_items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Action Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "version",
+          "title",
+          "content",
+          "summary",
+          "action_items"
+        ],
+        "title": "NoteResponse"
+      },
+      "NoteUpdate": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "NoteUpdate"
+      },
+      "Page_ChatResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChatResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[ChatResponse]"
+      },
+      "Page_EventResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EventResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[EventResponse]"
+      },
+      "Page_NoteResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NoteResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[NoteResponse]"
+      },
+      "Page_ReminderResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReminderResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[ReminderResponse]"
+      },
+      "Page_TaskResponse_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TaskResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "Page[TaskResponse]"
+      },
+      "ProfileUpdate": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 2,
+            "title": "Username"
+          },
+          "avatar": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "title": "Avatar",
+            "default": "1"
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Timezone",
+            "default": "UTC"
+          },
+          "current_password": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Current Password",
+            "default": ""
+          },
+          "new_password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 12
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "title": "ProfileUpdate"
+      },
+      "Proposal": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "Message"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskCreate"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Tasks"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestedNote"
+            },
+            "type": "array",
+            "maxItems": 1,
+            "title": "Notes"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventCreate"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Events"
+          },
+          "reminders": {
+            "items": {
+              "$ref": "#/components/schemas/ReminderCreate"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Reminders"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "Proposal"
+      },
+      "Register": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 2,
+            "title": "Username"
+          },
+          "avatar": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "title": "Avatar",
+            "default": "1"
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Timezone",
+            "default": "UTC"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 12,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "email",
+          "password"
+        ],
+        "title": "Register"
+      },
+      "ReminderCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "urgency": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Urgency",
+            "default": "medium"
+          },
+          "suggestion": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Suggestion",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "ReminderCreate"
+      },
+      "ReminderResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "urgency": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Urgency",
+            "default": "medium"
+          },
+          "suggestion": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Suggestion",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed"
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "version",
+          "title",
+          "status"
+        ],
+        "title": "ReminderResponse"
+      },
+      "ReminderUpdate": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "urgency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "completed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "ReminderUpdate"
+      },
+      "SessionResponse": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          },
+          "csrf_token": {
+            "type": "string",
+            "title": "Csrf Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user",
+          "csrf_token"
+        ],
+        "title": "SessionResponse"
+      },
+      "SuggestedNote": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Content"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 3000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "action_items": {
+            "items": {
+              "type": "string",
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Action Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "content"
+        ],
+        "title": "SuggestedNote"
+      },
+      "SystemStatusResponse": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "ai_mode": {
+            "type": "string",
+            "enum": [
+              "demo",
+              "vertex",
+              "disabled"
+            ],
+            "title": "Ai Mode"
+          },
+          "ai_status": {
+            "type": "string",
+            "enum": [
+              "configured",
+              "demo",
+              "disabled",
+              "last_request_succeeded",
+              "last_request_failed"
+            ],
+            "title": "Ai Status"
+          },
+          "demo_login": {
+            "type": "boolean",
+            "title": "Demo Login"
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "default_model": {
+            "type": "string",
+            "title": "Default Model"
+          },
+          "storage": {
+            "type": "string",
+            "enum": [
+              "sqlite",
+              "postgresql"
+            ],
+            "title": "Storage"
+          },
+          "reminder_delivery": {
+            "type": "string",
+            "const": "in_app_only",
+            "title": "Reminder Delivery"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "ai_mode",
+          "ai_status",
+          "demo_login",
+          "models",
+          "default_model",
+          "storage",
+          "reminder_delivery"
+        ],
+        "title": "SystemStatusResponse"
+      },
+      "TaskCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Priority",
+            "default": "medium"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "TaskCreate"
+      },
+      "TaskResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Priority",
+            "default": "medium"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed"
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "created_at",
+          "updated_at",
+          "version",
+          "title",
+          "status"
+        ],
+        "title": "TaskResponse"
+      },
+      "TaskUpdate": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "completed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "TaskUpdate"
+      },
+      "UserResponse": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 2,
+            "title": "Username"
+          },
+          "avatar": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2",
+              "3",
+              "4",
+              "5",
+              "6",
+              "7",
+              "8",
+              "9",
+              "10"
+            ],
+            "title": "Avatar",
+            "default": "1"
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Timezone",
+            "default": "UTC"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "is_demo": {
+            "type": "boolean",
+            "title": "Is Demo"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "id",
+          "email",
+          "is_demo",
+          "created_at"
+        ],
+        "title": "UserResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "SafeError": {
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "loc": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  }
+                },
+                "msg": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "CookieSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "aiops_session"
+      }
+    }
+  }
+}

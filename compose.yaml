@@ -1,0 +1,47 @@
+# Local, durable demo. This is NOT a production Cloud Run configuration.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      ENVIRONMENT: development
+      AI_MODE: demo
+      ALLOW_DEMO_LOGIN: "true"
+      COOKIE_SECURE: "false"
+      DATABASE_URL: sqlite:////app/backend/data/workspace.db
+    volumes:
+      - workspace-data:/app/backend/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/ready', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+  frontend:
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://backend:8080
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+volumes:
+  workspace-data:

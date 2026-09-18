@@ -1,167 +1,187 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useAppStore } from "@/store/useAppStore";
-import { StickyNote, RotateCw, RefreshCcw, Edit2, Trash2, X, Save } from "lucide-react";
-import clsx from "clsx";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  ArrowUpRight,
+  NotebookPen,
+  Plus,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+import { formatDate } from "@/lib/dates";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { useWorkspace } from "@/lib/queries";
+import type { Note, Page } from "@/lib/types";
+import RecordEditor, { DeleteRecordDialog } from "./RecordEditor";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  Pagination,
+  SearchInput,
+} from "./ui/Primitives";
 
 export default function NotesPanel() {
-  const { notes, loadNotes, isLoading, editNote, deleteNote } = useAppStore();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState("");
-
-  useEffect(() => {
-    loadNotes();
-  }, [loadNotes]);
-
-  const filteredNotes = useMemo(() => {
-    if (!searchQuery.trim()) return notes;
-    const q = searchQuery.toLowerCase();
-    return notes.filter(note =>
-      (note.summary && note.summary.toLowerCase().includes(q)) ||
-      (note.content && note.content.toLowerCase().includes(q)) ||
-      (note.action_items && note.action_items.some(item => item.toLowerCase().includes(q)))
-    );
-  }, [notes, searchQuery]);
-
+  const params = useSearchParams();
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 w-full max-w-4xl mx-auto dark:bg-zinc-900 dark:border-zinc-800">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 border-b pb-4 border-gray-100 dark:border-zinc-800 gap-4">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <StickyNote className="w-5 h-5 text-emerald-500" /> My Notes
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">Review summaries and action items.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            placeholder="Search notes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
+    <NotesContent
+      key={params.get("q") || ""}
+      initialSearch={params.get("q") || ""}
+    />
+  );
+}
+function NotesContent({ initialSearch }: { initialSearch: string }) {
+  const [search, setSearch] = useState(initialSearch);
+  const [page, setPage] = useState(0);
+  const [editor, setEditor] = useState<Note | "new" | null>(null);
+  const [deleting, setDeleting] = useState<Note | null>(null);
+  const q = useDebouncedValue(search);
+  const query = useWorkspace<Page<Note>>("notes", {
+    q,
+    limit: 12,
+    offset: page * 12,
+  });
+  return (
+    <>
+      <PageHeader
+        eyebrow="CAPTURE THE GOOD STUFF"
+        title="A place for your thoughts"
+        description="Meeting takeaways, passing ideas, and everything worth keeping."
+        action={
+          <Button onClick={() => setEditor("new")}>
+            <Plus size={16} />
+            New note
+          </Button>
+        }
+      />
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted">
+          {query.data
+            ? `${query.data.total} ${query.data.total === 1 ? "note" : "notes"} in your collection`
+            : "Your personal collection"}
+        </p>
+        <div className="w-full sm:w-72">
+          <SearchInput
+            label="Search notes"
+            placeholder="Search your notes…"
+            value={search}
+            onChange={(value) => {
+              setSearch(value);
+              setPage(0);
+            }}
           />
-          <button
-            onClick={loadNotes}
-            disabled={isLoading}
-            className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400"
-          >
-            <RotateCw className={clsx("w-5 h-5", isLoading && "animate-spin")} />
-          </button>
         </div>
       </div>
-
-      {filteredNotes.length === 0 ? (
-        <div className="text-center py-12">
-          <StickyNote className="w-12 h-12 mx-auto text-gray-200 mb-3" />
-          <p className="text-gray-500 font-medium">No notes saved.</p>
-          <p className="text-sm text-gray-400 mt-1">Try asking to summarize a meeting.</p>
+      {query.isPending ? (
+        <LoadingState label="Opening your notebook…" />
+      ) : query.isError ? (
+        <ErrorState error={query.error} retry={() => void query.refetch()} />
+      ) : !query.data.items.length ? (
+        <div className="panel">
+          <EmptyState
+            icon={<NotebookPen size={26} />}
+            title={
+              search
+                ? "No notes match that thought"
+                : "Good ideas deserve a home"
+            }
+            description={
+              search
+                ? "Try another word or phrase."
+                : "Jot something down, or use the assistant to turn a meeting into useful takeaways."
+            }
+            action={
+              <Button variant="secondary" onClick={() => setEditor("new")}>
+                <Plus size={15} />
+                Write a note
+              </Button>
+            }
+          />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredNotes.map((note, idx) => {
-            const isEditing = editingNoteId === note.content;
-
-            if (isEditing) {
-              return (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {query.data.items.map((note, index) => (
+            <article key={note.id} className="note-card">
+              <div className="mb-5 flex items-center justify-between">
                 <div
-                  key={note.id || idx}
-                  className="p-5 rounded-2xl border border-emerald-200 bg-white shadow-sm dark:bg-zinc-800 dark:border-emerald-500/50 flex flex-col gap-3"
+                  className={`flex h-9 w-9 items-center justify-center rounded-lg ${index % 3 === 0 ? "badge-amber" : index % 3 === 1 ? "badge-purple" : "badge-teal"}`}
                 >
-                  <textarea
-                    className="w-full px-3 py-2 border rounded-md min-h-[100px] dark:bg-zinc-900 dark:border-zinc-700 dark:text-white"
-                    value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
-                    placeholder="Note content..."
-                  />
-                  <div className="flex items-center gap-3 mt-auto">
-                    <button
-                      onClick={() => {
-                        if (editContent.trim() !== "") {
-                          editNote(note.content, editContent);
-                        }
-                        setEditingNoteId(null);
-                      }}
-                      className="p-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 transition-colors flex-1 flex justify-center items-center gap-1"
-                    >
-                      <Save className="w-4 h-4" /> Save
-                    </button>
-                    <button
-                      onClick={() => setEditingNoteId(null)}
-                      className="p-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <NotebookPen size={18} />
                 </div>
-              );
-            }
-
-            return (
-              <div
-                key={note.id || idx}
-                className="group p-5 rounded-2xl border border-gray-100 bg-gray-50/50 hover:shadow-md transition-shadow dark:bg-zinc-800/50 dark:border-zinc-700"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <span className="text-xs text-gray-500 font-medium bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full dark:bg-emerald-900/50 dark:text-emerald-300">
-                    {note.created_at && !isNaN(new Date(note.created_at).getTime()) ? new Date(note.created_at).toLocaleDateString() : "Unknown Date"}
-                  </span>
-
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => {
-                        setEditingNoteId(note.content);
-                        setEditContent(note.content);
-                      }}
-                      className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors dark:hover:bg-emerald-900/30 dark:hover:text-emerald-400"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => deleteNote(note.content)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors dark:hover:bg-red-900/30 dark:hover:text-red-400"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {note.summary && (
-                  <div className="mb-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-1 dark:text-gray-300">
-                      <RefreshCcw className="w-3.5 h-3.5" /> Summary
-                    </h4>
-                    <p className="text-sm text-gray-600 leading-relaxed dark:text-gray-400">
-                      {note.summary}
-                    </p>
-                  </div>
-                )}
-
-                {note.action_items && note.action_items.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2 dark:text-gray-300">Action Items</h4>
-                    <ul className="space-y-2">
-                      {note.action_items.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {!note.summary && (!note.action_items || note.action_items.length === 0) && (
-                  <p className="text-sm text-gray-500 italic mt-2 line-clamp-3">
-                    {note.content}
-                  </p>
-                )}
+                <button
+                  className="icon-button"
+                  aria-label={`Delete ${note.title}`}
+                  onClick={() => setDeleting(note)}
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
-            );
-          })}
+              <h2 className="mb-2 break-words text-base font-semibold">
+                <button
+                  className="text-left hover:text-accent"
+                  onClick={() => setEditor(note)}
+                >
+                  {note.title}
+                </button>
+              </h2>
+              <p className="line-clamp-4 whitespace-pre-line break-words text-[13px] leading-7 text-muted">
+                {note.summary || note.content}
+              </p>
+              {note.action_items.length > 0 && (
+                <p className="mt-3 text-xs font-medium text-accent">
+                  {note.action_items.length} action{" "}
+                  {note.action_items.length === 1 ? "item" : "items"} captured
+                </p>
+              )}
+              <div className="mt-auto flex items-center justify-between gap-2 pt-6">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted">
+                    {formatDate(note.updated_at)}
+                  </span>
+                  {note.summary && (
+                    <Badge tone="purple">
+                      <Sparkles size={10} />
+                      AI summary
+                    </Badge>
+                  )}
+                </div>
+                <button
+                  onClick={() => setEditor(note)}
+                  className="icon-button"
+                  aria-label={`Open ${note.title}`}
+                >
+                  <ArrowUpRight size={17} />
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
       )}
-    </div>
+      {query.data && query.data.total > 12 && (
+        <div className="panel mt-5">
+          <Pagination
+            total={query.data.total}
+            page={page}
+            limit={12}
+            onChange={setPage}
+          />
+        </div>
+      )}
+      <RecordEditor
+        kind="notes"
+        open={editor !== null}
+        item={editor && editor !== "new" ? editor : undefined}
+        onClose={() => setEditor(null)}
+      />
+      <DeleteRecordDialog
+        kind="notes"
+        item={deleting}
+        onClose={() => setDeleting(null)}
+      />
+    </>
   );
 }

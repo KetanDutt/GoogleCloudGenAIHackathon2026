@@ -1,200 +1,147 @@
-import json
-import asyncio
-import warnings
-from fastapi import FastAPI, HTTPException, Depends, status
+"""FastAPI composition root. Run from the repository root: uvicorn backend.main:app."""
 
-warnings.filterwarnings('ignore', category=UserWarning, module='vertexai')
-from fastapi.security import OAuth2PasswordBearer
-from typing import List, Dict, Any
-from datetime import timedelta
+import logging
+import sys
+from contextlib import asynccontextmanager
 
-from models.schemas import ChatRequest, ChatResponse, TaskCompleteRequest, UserCreate, UserLogin, TokenResponse, UserResponse, TaskEditRequest, TaskDeleteRequest, NoteEditRequest, NoteDeleteRequest
-from services.auth_service import get_password_hash, verify_password, create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
-from services.bigquery_client import create_user, get_user_by_email, edit_task, delete_task, edit_note, delete_note
-from services.workflow import process_chat_workflow
-
-from tools.task_tools import list_tasks, complete_task_status
-from tools.notes_tools import fetch_notes
-from tools.reminder_tools import fetch_reminders
-from tools.calendar_tools import fetch_events
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
-from services.bigquery_client import get_connection_status as get_bq_status
-from services.vertex_client import get_connection_status as get_vertex_status, get_available_models
-from config.settings import settings
+from backend.api import auth, chat, export, resources
+from backend.api.middleware import RequestSafetyMiddleware
+from backend.api.openapi import configure_openapi
+from backend.config.settings import Settings
+from backend.db.database import Database
+from backend.models.schemas import SystemStatusResponse
+from backend.services.rate_limit import RateLimiter
+from backend.services.vertex_client import AIInvalidResponse, AIUnavailable, VertexClient
+from backend.services.workflow import Workflow
 
-app = FastAPI(
-    title="AI Personal Operations Manager",
-    description="Multi-Agent System for Managing Tasks, Notes, and Calendars",
-    version="1.0.0"
-)
+logger = logging.getLogger(__name__)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+def create_app(settings: Settings | None = None) -> FastAPI:
+    settings = settings or Settings()
+    http_logger = logging.getLogger("aiops.http")
+    if not http_logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        http_logger.addHandler(handler)
+    http_logger.setLevel(logging.INFO)
+    http_logger.propagate = False
+    database = Database(settings)
+    vertex = VertexClient(settings)
 
-def get_current_user_email(token: str = Depends(oauth2_scheme)):
-    payload = verify_token(token)
-    if not payload or "sub" not in payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return payload["sub"]
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        from starlette.concurrency import run_in_threadpool
 
-import re
+        await run_in_threadpool(database.initialize, settings)
+        app.state.ready = True
+        try:
+            yield
+        finally:
+            app.state.ready = False
+            await run_in_threadpool(vertex.close)
+            database.engine.dispose()
 
-def is_valid_password(password: str) -> bool:
-    if len(password) < 8 or len(password) > 16:
-        return False
-    if not re.search(r"\d", password):
-        return False
-    if not re.search(r"[A-Z]", password):
-        return False
-    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
-        return False
-    return True
-
-@app.get("/users/me", response_model=UserResponse)
-async def get_current_user_profile(current_user_email: str = Depends(get_current_user_email)):
-    db_user = await asyncio.to_thread(get_user_by_email, current_user_email)
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {
-        "email": db_user["email"],
-        "username": db_user.get("username", db_user["email"].split("@")[0]),
-        "avatar": db_user.get("avatar", "1")
-    }
-
-@app.post("/register", response_model=TokenResponse)
-async def register(user: UserCreate):
-    if not is_valid_password(user.password):
-        raise HTTPException(
-            status_code=400,
-            detail="Password must be 8-16 characters and contain a number, a capital letter, and a special character."
-        )
-
-    existing_user = await asyncio.to_thread(get_user_by_email, user.email)
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    hashed_password = get_password_hash(user.password)
-    success = await asyncio.to_thread(create_user, user.email, hashed_password, user.username, user.avatar)
-
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to create user")
-
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+    app = FastAPI(
+        title="AI Personal Operations Manager",
+        version="2.0.0",
+        description="A private workspace with review-before-save agent proposals.",
+        lifespan=lifespan,
+        docs_url="/docs" if settings.environment != "production" else None,
+        redoc_url=None,
+        openapi_url="/openapi.json" if settings.environment != "production" else None,
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    app.state.settings, app.state.database = settings, database
+    app.state.vertex, app.state.workflow = vertex, Workflow(vertex)
+    app.state.limiter, app.state.ready = RateLimiter(), False
+    app.add_middleware(RequestSafetyMiddleware, settings=settings)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_headers=["Content-Type", "X-CSRF-Token"],
+    )
+    for router in (auth.router, resources.router, chat.router, export.router):
+        app.include_router(router, prefix="/api/v1")
 
-@app.post("/login", response_model=TokenResponse)
-async def login(user: UserLogin):
-    db_user = await asyncio.to_thread(get_user_by_email, user.email)
-    if not db_user or not verify_password(user.password, db_user["hashed_password"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(request: Request, exc: RequestValidationError):
+        # Pydantic's default error output can include submitted passwords and note content.
+        issues = [
+            {"loc": error["loc"], "msg": error["msg"], "type": error["type"]}
+            for error in exc.errors()
+        ]
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": "Please check the submitted fields.",
+                "errors": issues,
+                "request_id": request.state.request_id,
+            },
         )
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+    @app.exception_handler(SQLAlchemyError)
+    async def storage_error(request: Request, exc: SQLAlchemyError):
+        logger.error("storage_failure id=%s type=%s", request.state.request_id, type(exc).__name__)
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "Storage is temporarily unavailable. Refresh to check whether your change was saved before retrying.",
+                "request_id": request.state.request_id,
+            },
+        )
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest, current_user: str = Depends(get_current_user_email)):
-    """Chat endpoint to process user input."""
-    return await process_chat_workflow(request, current_user)
+    @app.exception_handler(AIUnavailable)
+    async def ai_unavailable(request: Request, exc: AIUnavailable):
+        return JSONResponse(
+            status_code=503,
+            content={"detail": str(exc), "request_id": request.state.request_id},
+            headers={"Retry-After": "30"},
+        )
 
-@app.get("/tasks", response_model=List[Dict[str, Any]])
-async def get_tasks_endpoint(current_user: str = Depends(get_current_user_email)):
-    """Returns user tasks."""
-    tasks = await asyncio.to_thread(list_tasks, current_user)
-    return tasks
+    @app.exception_handler(AIInvalidResponse)
+    async def ai_invalid(request: Request, exc: AIInvalidResponse):
+        return JSONResponse(
+            status_code=502, content={"detail": str(exc), "request_id": request.state.request_id}
+        )
 
-@app.put("/tasks/complete")
-async def complete_task_endpoint(request: TaskCompleteRequest, current_user: str = Depends(get_current_user_email)):
-    """Marks a user task as complete."""
-    success = await asyncio.to_thread(complete_task_status, current_user, request.task_name)
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to complete task")
-    return {"message": "Task completed successfully"}
+    @app.get("/health", tags=["Operations"])
+    def health():
+        # Liveness never spends model tokens or runs a BigQuery query.
+        return {"status": "ok", "version": "2.0.0"}
 
-@app.put("/tasks/edit")
-async def edit_task_endpoint(request: TaskEditRequest, current_user: str = Depends(get_current_user_email)):
-    success = await asyncio.to_thread(edit_task, current_user, request.task_id, request.name, request.deadline)
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to edit task")
-    return {"message": "Task edited successfully"}
+    @app.get("/ready", tags=["Operations"])
+    def readiness():
+        if not app.state.ready:
+            return JSONResponse(status_code=503, content={"ready": False})
+        try:
+            database.check()
+        except SQLAlchemyError:
+            return JSONResponse(status_code=503, content={"ready": False})
+        return {"ready": True}
 
-@app.delete("/tasks/delete")
-async def delete_task_endpoint(request: TaskDeleteRequest, current_user: str = Depends(get_current_user_email)):
-    success = await asyncio.to_thread(delete_task, current_user, request.task_id)
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to delete task")
-    return {"message": "Task deleted successfully"}
+    @app.get("/api/v1/status", tags=["Operations"], response_model=SystemStatusResponse)
+    def system_status():
+        return {
+            "version": "2.0.0",
+            "ai_mode": settings.ai_mode,
+            "ai_status": vertex.status,
+            "demo_login": settings.allow_demo_login,
+            "models": settings.models if settings.ai_mode == "vertex" else [],
+            "default_model": settings.default_model,
+            "storage": "postgresql" if settings.database_url.startswith("postgresql") else "sqlite",
+            "reminder_delivery": "in_app_only",
+        }
 
-@app.get("/notes", response_model=List[Dict[str, Any]])
-async def get_notes_endpoint(current_user: str = Depends(get_current_user_email)):
-    """Returns user notes."""
-    notes = await asyncio.to_thread(fetch_notes, current_user)
-    return notes
+    configure_openapi(app, settings)
+    return app
 
-@app.put("/notes/edit")
-async def edit_note_endpoint(request: NoteEditRequest, current_user: str = Depends(get_current_user_email)):
-    success = await asyncio.to_thread(edit_note, current_user, request.note_id, request.content)
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to edit note")
-    return {"message": "Note edited successfully"}
 
-@app.delete("/notes/delete")
-async def delete_note_endpoint(request: NoteDeleteRequest, current_user: str = Depends(get_current_user_email)):
-    success = await asyncio.to_thread(delete_note, current_user, request.note_id)
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to delete note")
-    return {"message": "Note deleted successfully"}
-
-@app.get("/reminders", response_model=List[Dict[str, Any]])
-async def get_reminders_endpoint(current_user: str = Depends(get_current_user_email)):
-    """Returns user reminders."""
-    reminders = await asyncio.to_thread(fetch_reminders, current_user)
-    return reminders
-
-@app.get("/events", response_model=List[Dict[str, Any]])
-async def get_events_endpoint(current_user: str = Depends(get_current_user_email)):
-    """Returns user calendar events."""
-    events = await asyncio.to_thread(fetch_events, current_user)
-    return events
-
-@app.get("/models")
-async def get_models_endpoint():
-    """Returns available Vertex AI models."""
-    return {"models": get_available_models()}
-
-@app.get("/ready")
-async def readiness():
-    # Check if all critical services are initialized
-    return {"ready": True}
-
-@app.get("/health")
-async def health_check():
-    """Health check for deployment."""
-    bq_status = await asyncio.to_thread(get_bq_status)
-    vertex_status = await asyncio.to_thread(get_vertex_status)
-    return {
-        "status": "ok",
-        "bigquery": bq_status,
-        "vertex_ai": vertex_status
-    }
+app = create_app()

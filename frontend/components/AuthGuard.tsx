@@ -1,42 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { useAppStore } from "@/store/useAppStore";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "@/lib/queries";
+import { ErrorState, LoadingState } from "./ui/Primitives";
 
 const publicRoutes = ["/login", "/register"];
-
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const { token, user, loadUser } = useAppStore();
-  const [mounted, setMounted] = useState(false);
-
+  const router = useRouter();
+  const session = useSession();
+  const isPublic = publicRoutes.includes(pathname);
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (token && !user) {
-      loadUser();
-    }
-  }, [token, user, loadUser]);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    if (!token && !publicRoutes.includes(pathname)) {
-      router.push("/login");
-    } else if (token && publicRoutes.includes(pathname)) {
-      router.push("/");
-    }
-  }, [token, pathname, router, mounted]);
-
-  if (!mounted) return null; // Avoid hydration mismatch
-
-  if (!token && !publicRoutes.includes(pathname)) {
-    return null; // Return nothing while redirecting to login
-  }
-
-  return <>{children}</>;
+    if (session.isPending || session.isError) return;
+    if (!session.data && !isPublic) router.replace("/login");
+    else if (session.data && isPublic) router.replace("/");
+  }, [session.data, session.isPending, session.isError, isPublic, router]);
+  if (session.isPending)
+    return (
+      <div className="grid min-h-dvh place-items-center">
+        <LoadingState />
+      </div>
+    );
+  if (session.isError)
+    return (
+      <div className="mx-auto mt-24 max-w-lg p-6">
+        <ErrorState
+          error={session.error}
+          retry={() => void session.refetch()}
+        />
+      </div>
+    );
+  if ((!session.data && !isPublic) || (session.data && isPublic))
+    return <LoadingState label="Taking you to your workspace…" />;
+  return children;
 }

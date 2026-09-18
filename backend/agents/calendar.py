@@ -1,49 +1,56 @@
-from agents.agent_utils import call_llm_with_retry
 import re
-import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
-def schedule_task(task: str, model_name: str = "gemini-2.5-flash") -> dict:
-    """
-    Suggests a realistic start and end time (datetime string format) for a given task.
-    """
-    now = datetime.datetime.now().isoformat()
+from pydantic import Field
 
-    prompt = f"""
-    You are a Calendar Agent. Suggest a realistic start and end time for this task:
-    Task: "{task}"
-    Current Date and Time: {now}
+from backend.agents.agent_utils import agent_prompt
+from backend.models.schemas import EventCreate, Proposal, Schema
 
-    Provide your response exactly in this format:
-    START: <start_datetime_iso_format>
-    END: <end_datetime_iso_format>
 
-    Make reasonable assumptions about the task duration (e.g., 30 mins, 1 hour).
-    """
+class CalendarPlan(Schema):
+    message: str = Field(min_length=1, max_length=3000)
+    events: list[EventCreate] = Field(max_length=4)
 
-    def parse_calendar(response: str) -> dict:
-        start_match = re.search(r'START:\s*([^\n]+)', response)
-        end_match = re.search(r'END:\s*([^\n]+)', response)
 
-        start_time = start_match.group(1).strip() if start_match else ""
-        end_time = end_match.group(1).strip() if end_match else ""
+def demo_datetime(text: str, timezone: str) -> datetime | None:
+    """Deliberately small demo grammar: today/tomorrow at an explicit clock time."""
+    value = text.lower()
+    match = re.search(r"\b(today|tomorrow)\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", value)
+    if not match:
+        return None
+    day, hours, minutes, meridiem = match.groups()
+    hours, minutes = int(hours), int(minutes or 0)
+    if minutes > 59 or (meridiem and not 1 <= hours <= 12) or (not meridiem and hours > 23):
+        return None
+    if meridiem:
+        hours = hours % 12 + (12 if meridiem == "pm" else 0)
+    now = datetime.now(ZoneInfo(timezone))
+    date = now + timedelta(days=1 if day == "tomorrow" else 0)
+    return date.replace(hour=hours, minute=minutes, second=0, microsecond=0)
 
-        if not start_time or not end_time:
-            raise ValueError("Missing START or END tags in response.")
 
-        # Validate ISO format
-        datetime.datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-        datetime.datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-
-        return {"start_time": start_time, "end_time": end_time}
-
-    base_time = datetime.datetime.now() + datetime.timedelta(hours=1)
-    default_start = base_time.isoformat()
-    default_end = (base_time + datetime.timedelta(hours=1)).isoformat()
-
-    return call_llm_with_retry(
-        prompt=prompt,
-        model_name=model_name,
-        parse_func=parse_calendar,
-        fallback_value={"start_time": default_start, "end_time": default_end},
-        clarification_prompt_template="The previous response was incorrectly formatted. Please return EXACTLY: \nSTART: <iso_time>\nEND: <iso_time>\nOriginal request: {prompt}"
+def schedule_task(client, text: str, timezone: str, model: str) -> Proposal:
+    if client.settings.ai_mode == "demo":
+        start = demo_datetime(text, timezone)
+        if start is None:
+            return Proposal(
+                message="In demo mode, include a time like ‘tomorrow at 10am’, or add an event directly in Calendar. No date has been guessed and nothing was saved."
+            )
+        return Proposal(
+            message="A demo calendar proposal with a one-hour duration. Review the date, timezone, and duration before saving. This does not sync to Google Calendar.",
+            events=[
+                EventCreate(title=text[:200], start_time=start, end_time=start + timedelta(hours=1))
+            ],
+        )
+    result = client.generate(
+        agent_prompt(
+            "Calendar Agent",
+            "Propose up to four events. Require a clear date and start time; ask a question if either is missing. If duration is omitted, suggest 30 minutes and disclose that assumption in message. End must be after start. These are local workspace events, not Google Calendar bookings.",
+            text,
+            timezone,
+        ),
+        CalendarPlan,
+        model,
     )
+    return Proposal(message=result.message, events=result.events)

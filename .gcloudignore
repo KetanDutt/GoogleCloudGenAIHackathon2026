@@ -1,0 +1,10 @@
+.gcloudignore
+.git
+.gitignore
+#!include:.gitignore
+docs
+BigQueryBackups
+*.mp4
+*.pdf
+*.pptx
+*.openscreen

@@ -1,83 +1,86 @@
-import vertexai
-import warnings
-from vertexai.generative_models import GenerativeModel
-from config.settings import settings
-
-warnings.filterwarnings('ignore', category=UserWarning, module='vertexai')
+"""Lazy Google Gen AI SDK integration for Vertex AI, with bounded output and timeouts."""
 
 import logging
+import threading
+from typing import TypeVar
+
+from pydantic import BaseModel, ValidationError
+
+from backend.config.settings import Settings
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T", bound=BaseModel)
 
-# Initialize Vertex AI
-try:
-    vertexai.init(project=settings.PROJECT_ID, location=settings.LOCATION)
-    model = GenerativeModel("gemini-2.5-flash")
-except Exception as e:
-    logger.error(f"Failed to initialize Vertex AI: {e}")
-    # Fallback to avoid breaking tests if GCP is not properly configured
-    model = None
 
-vertex_status = "unknown"
-
-def get_connection_status() -> str:
-    """Returns the connection status of Vertex AI."""
-    global vertex_status
-    if vertex_status != "unknown":
-        return vertex_status
-
-    if not model:
-        vertex_status = "disconnected"
-        return vertex_status
-
-    try:
-        # Minimal ping to check if API is enabled and responding
-        model.generate_content("ping")
-        vertex_status = "connected"
-    except Exception as e:
-        if "429 Resource exhausted" in str(e) or "429 Quota exceeded" in str(e):
-            logger.warning("Vertex AI connection check: Rate limited (429), but connection is successful.")
-            vertex_status = "connected"
-        else:
-            logger.warning(f"Vertex AI connection check failed: {e}")
-            vertex_status = "disconnected"
-
-    return vertex_status
-
-def get_available_models() -> list[str]:
-    """Returns a list of available Vertex AI foundational models for chat."""
-    return [
-        "gemini-2.5-pro",
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-2.0-flash-lite",
-        "gemini-2.0-flash",
-    ]
-
-class VertexAIError(Exception):
-    """Custom exception raised when Vertex AI is unavailable or an error occurs."""
+class AIUnavailable(Exception):
     pass
 
-def generate_text(prompt: str, model_name: str = "gemini-2.5-flash") -> str:
-    """
-    Generates text using the specified Gemini model on Vertex AI.
-    Raises VertexAIError on failure.
-    """
-    if not model:
-        # Raise instead of returning a mock string
-        raise VertexAIError("Vertex AI is not initialized or configured properly.")
 
-    try:
-        # Use dynamic model if provided and different from the global default
-        active_model = model
-        if model_name and model_name != "gemini-2.5-flash":
-             active_model = GenerativeModel(model_name)
+class AIInvalidResponse(Exception):
+    pass
 
-        response = active_model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        if "SERVICE_DISABLED" in str(e) or "has not been used in project" in str(e):
-             logger.warning("Vertex AI is not enabled for this project.")
-             raise VertexAIError(f"Vertex AI API not enabled: {e}")
-        logger.error(f"Error calling Vertex AI: {e}", exc_info=True)
-        raise VertexAIError(f"Error generating text: {e}")
+
+class VertexClient:
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self._client = None
+        self._lock = threading.Lock()
+        self.status = "configured" if settings.ai_mode == "vertex" else settings.ai_mode
+
+    def _get_client(self):
+        with self._lock:
+            if self._client is None:
+                from google import genai
+                from google.genai import types
+
+                self._client = genai.Client(
+                    vertexai=True,
+                    project=self.settings.google_cloud_project,
+                    location=self.settings.google_cloud_location,
+                    http_options=types.HttpOptions(
+                        timeout=self.settings.ai_timeout_seconds * 1000,
+                        retry_options=types.HttpRetryOptions(attempts=1),
+                    ),
+                )
+            return self._client
+
+    def generate(self, prompt: str, schema: type[T], model: str) -> T:
+        if self.settings.ai_mode != "vertex" or model not in self.settings.models:
+            raise AIUnavailable("AI is not configured for this model.")
+        try:
+            from google.genai import types
+
+            response = self._get_client().models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=schema,
+                    temperature=0.2,
+                    max_output_tokens=4096,
+                    # Disable SDK automatic function execution: models only propose data.
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+                ),
+            )
+            if not response.text or len(response.text) > 65_536:
+                raise AIInvalidResponse(
+                    "The model returned an empty or oversized response. Nothing was saved."
+                )
+            result = schema.model_validate_json(response.text)
+        except (ValidationError, AIInvalidResponse) as exc:
+            self.status = "last_request_failed"
+            raise AIInvalidResponse(
+                "The model returned an invalid proposal. Nothing was saved. Please try a more specific request."
+            ) from exc
+        except Exception as exc:
+            self.status = "last_request_failed"
+            logger.warning("vertex_request_failed type=%s", type(exc).__name__)
+            raise AIUnavailable(
+                "Vertex AI is unavailable or timed out. Nothing was saved. Try again later, or create the item manually."
+            ) from exc
+        self.status = "last_request_succeeded"
+        return result
+
+    def close(self):
+        if self._client:
+            self._client.close()

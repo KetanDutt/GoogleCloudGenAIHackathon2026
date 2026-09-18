@@ -1,213 +1,625 @@
 "use client";
 
-import { useAppStore } from "@/store/useAppStore";
-import { Send, User, Bot, Loader2 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import "regenerator-runtime/runtime";
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+import { useEffect, useRef, useState } from "react";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import Link from "next/link";
+import {
+  ArrowRight,
+  Bell,
+  CalendarDays,
+  Check,
+  CircleCheck,
+  Copy,
+  LoaderCircle,
+  Mic,
+  NotebookPen,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import clsx from "clsx";
-import { motion, AnimatePresence } from "framer-motion";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import toast from "react-hot-toast";
+import { api, errorMessage } from "@/lib/api";
+import { browserTimezone, formatDate, formatTime } from "@/lib/dates";
+import {
+  useSession,
+  useSystemStatus,
+  useWorkspaceMutation,
+} from "@/lib/queries";
+import { useDictation } from "@/lib/useDictation";
+import type { ChatRun, Kind, Page } from "@/lib/types";
+import { ConfirmDialog } from "./ui/Modal";
+import {
+  Badge,
+  Button,
+  ErrorState,
+  FormError,
+  LoadingState,
+  PageHeader,
+} from "./ui/Primitives";
+import WorkflowVisualizer from "./WorkflowVisualizer";
 
-import toast from 'react-hot-toast';
-import { Copy, AlertCircle, RefreshCw } from 'lucide-react';
-
-export function MessageBubble({ role, content, timestamp, intent, isError, onRetry }: { role: string; content: string; timestamp: string; intent?: string, isError?: boolean, onRetry?: () => void }) {
-  const isUser = role === "user";
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(content);
-    toast.success("Copied to clipboard");
-  };
-
+const suggestions = [
+  {
+    icon: CircleCheck,
+    title: "Find my next steps",
+    subtitle: "Turn a goal into a manageable plan",
+    prompt: "Plan my week for a product launch",
+    tone: "badge-blue",
+  },
+  {
+    icon: NotebookPen,
+    title: "Make sense of my notes",
+    subtitle: "Capture what matters from a meeting",
+    prompt:
+      "Summarize this meeting: We agreed to finish the launch brief this week. Maya will review the designs, and I will collect two customer examples.",
+    tone: "badge-amber",
+  },
+  {
+    icon: CalendarDays,
+    title: "Make a little time",
+    subtitle: "Carve out space in my calendar",
+    prompt: "Schedule a focus session tomorrow at 10am",
+    tone: "badge-purple",
+  },
+  {
+    icon: Bell,
+    title: "Keep it on my radar",
+    subtitle: "One less thing to remember",
+    prompt: "Remind me to review the launch brief tomorrow at 9am",
+    tone: "badge-teal",
+  },
+];
+export default function ChatWindow() {
+  const { data: session } = useSession();
+  const { data: status } = useSystemStatus();
+  const queryClient = useQueryClient();
+  const [input, setInput] = useState("");
+  const [model, setModel] = useState("");
+  const [clearOpen, setClearOpen] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const requestRef = useRef<{
+    user_input: string;
+    request_id: string;
+    model_name?: string;
+  } | null>(null);
+  const speech = useDictation(setInput);
+  const key = ["workspace", session?.user.id, "chat"];
+  const history = useInfiniteQuery({
+    queryKey: key,
+    queryFn: ({ pageParam, signal }) =>
+      api<Page<ChatRun>>(`/chat?limit=20&offset=${pageParam}`, { signal }),
+    initialPageParam: 0,
+    getNextPageParam: (page) =>
+      page.offset + page.limit < page.total
+        ? page.offset + page.limit
+        : undefined,
+    enabled: !!session,
+  });
+  const send = useMutation({
+    mutationFn: (payload: {
+      user_input: string;
+      request_id: string;
+      model_name?: string;
+    }) => api<ChatRun>("/chat", { method: "POST", body: payload }),
+    onSuccess: async () => {
+      setInput("");
+      requestRef.current = null;
+      await queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+  const runs = (
+    history.data?.pages.flatMap((page) => page.items) || []
+  ).toReversed();
+  const latest = runs.at(-1);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+      block: "end",
+    });
+  }, [latest?.id, send.isPending]);
+  async function submit(event?: React.FormEvent) {
+    event?.preventDefault();
+    const text = input.trim();
+    if (!text || send.isPending || status?.ai_mode === "disabled") return;
+    speech.stop();
+    const selectedModel =
+      status?.ai_mode === "vertex" ? model || status.default_model : undefined;
+    if (
+      requestRef.current?.user_input !== text ||
+      requestRef.current?.model_name !== selectedModel
+    ) {
+      requestRef.current = {
+        user_input: text,
+        model_name: selectedModel,
+        request_id: crypto.randomUUID(),
+      };
+    }
+    send.mutate(requestRef.current);
+  }
+  const clear = useWorkspaceMutation(
+    () => api("/chat", { method: "DELETE" }),
+    "Assistant history cleared",
+  );
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.3 }}
-      className={clsx("flex w-full mt-4 space-x-3 max-w-2xl group", isUser ? "ml-auto justify-end" : "")}
-    >
-      {!isUser && (
-        <div className={clsx("flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center", isError ? "bg-red-100 dark:bg-red-900" : "bg-indigo-100 dark:bg-indigo-900")}>
-          {isError ? <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-300" /> : <Bot className="w-5 h-5 text-indigo-600 dark:text-indigo-300" />}
-        </div>
-      )}
-      <div>
-        <div
-          className={clsx(
-            "p-3 rounded-2xl text-sm shadow-sm prose prose-sm max-w-none dark:prose-invert relative",
-            isUser
-              ? "bg-blue-600 text-white rounded-tr-sm prose-p:text-white prose-a:text-white"
-              : isError
-              ? "bg-red-50 border border-red-200 text-red-800 rounded-tl-sm dark:bg-red-900/20 dark:border-red-800/50 dark:text-red-200"
-              : "bg-white border border-gray-100 text-gray-800 rounded-tl-sm dark:bg-zinc-800 dark:border-zinc-700 dark:text-gray-100"
+    <>
+      <PageHeader
+        eyebrow="A THINKING PARTNER FOR YOUR EVERYDAY"
+        title="Let’s find a way forward."
+        description="Bring a thought, a goal, or a busy mind. We’ll start with one next step."
+        action={
+          <Button
+            variant="ghost"
+            disabled={!runs.length || send.isPending}
+            onClick={() => setClearOpen(true)}
+          >
+            <Trash2 size={14} />
+            Clear history
+          </Button>
+        }
+      />
+      <div className="grid items-start gap-6 xl:grid-cols-[1fr_270px]">
+        <div className="panel min-w-0 overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-4">
+            <div className="flex items-center gap-2">
+              <span className="agent-icon">
+                <Sparkles size={17} />
+              </span>
+              <div>
+                <h2 className="text-xs font-semibold">Your AI Ops assistant</h2>
+                <p className="mt-0.5 text-[10px] text-muted">
+                  Planning · Notes · Calendar · Reminders
+                </p>
+              </div>
+            </div>
+            {status?.ai_mode === "vertex" ? (
+              <select
+                aria-label="Assistant model"
+                className="input !min-h-8 !w-auto !py-1 !text-[11px]"
+                value={model || status.default_model}
+                onChange={(event) => setModel(event.target.value)}
+                disabled={send.isPending}
+              >
+                {status.models.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Badge tone="amber">
+                {status?.ai_mode === "disabled"
+                  ? "Assistant disabled"
+                  : "Demo templates"}
+              </Badge>
+            )}
+          </div>
+          {status?.ai_mode === "demo" && (
+            <div className="border-b border-line bg-[#fffaf0] px-5 py-3 text-[11px] leading-5 text-[#856831] dark:bg-[#302d20] dark:text-[#dac79d]">
+              You’re in demo mode. Replies are deterministic local examples, not
+              AI-generated. No cloud calls are made.
+            </div>
           )}
-        >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          <div
+            className="max-h-[65dvh] min-h-[400px] overflow-y-auto overscroll-contain px-4 py-6 sm:px-6"
+            role="log"
+            aria-label="Assistant conversation"
+            aria-live="polite"
+          >
+            {history.hasNextPage && (
+              <div className="mb-5 text-center">
+                <Button
+                  variant="secondary"
+                  loading={history.isFetchingNextPage}
+                  onClick={() => void history.fetchNextPage()}
+                >
+                  Show earlier messages
+                </Button>
+              </div>
+            )}
+            {history.isPending ? (
+              <LoadingState label="Opening your conversation…" />
+            ) : history.isError ? (
+              <ErrorState
+                error={history.error}
+                retry={() => void history.refetch()}
+              />
+            ) : !runs.length ? (
+              <div className="mx-auto max-w-lg py-6">
+                <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-accent/10 bg-accent-soft text-accent">
+                  <Sparkles size={26} strokeWidth={1.5} />
+                </div>
+                <h3 className="text-center text-[23px] font-medium tracking-tight">
+                  A busy mind, meet a clear plan.
+                </h3>
+                <p className="mx-auto mb-7 mt-3 max-w-sm text-center text-xs leading-6 text-muted">
+                  What would make your day a little easier? Pick a starting
+                  point, or tell me what’s on your mind.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {suggestions.map(
+                    ({ icon: Icon, title, subtitle, prompt, tone }) => (
+                      <button
+                        key={title}
+                        onClick={() => {
+                          setInput(prompt);
+                          inputRef.current?.focus();
+                        }}
+                        className="rounded-xl border border-line p-4 text-left transition-colors hover:border-accent/40 hover:bg-canvas"
+                      >
+                        <span
+                          className={`mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg ${tone}`}
+                        >
+                          <Icon size={16} />
+                        </span>
+                        <span className="mb-1.5 block text-xs font-semibold">
+                          {title}
+                        </span>
+                        <span className="block text-[10px] leading-5 text-muted">
+                          {subtitle}
+                        </span>
+                      </button>
+                    ),
+                  )}
+                </div>
+              </div>
+            ) : (
+              runs.map((run) => <Conversation key={run.id} run={run} />)
+            )}
+            {send.isPending && (
+              <div className="my-5 flex items-center gap-3 rounded-xl bg-canvas p-4">
+                <LoaderCircle
+                  size={18}
+                  className="shrink-0 animate-spin text-accent"
+                />
+                <div>
+                  <p className="text-xs font-medium">Finding your next step…</p>
+                  <p className="mt-1 text-[10px] text-muted">
+                    Preparing a proposal. Nothing is saved yet.
+                  </p>
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+          <form
+            onSubmit={submit}
+            className="border-t border-line bg-surface p-4 sm:p-5"
+          >
+            <FormError
+              message={send.isError ? errorMessage(send.error) : undefined}
+            />
+            <div
+              className={clsx(
+                "relative rounded-xl border border-line bg-canvas px-4 pb-3 pt-3 focus-within:border-accent/50",
+                send.isError && "mt-3",
+              )}
+            >
+              <label htmlFor="assistant-message" className="sr-only">
+                Message your assistant
+              </label>
+              <textarea
+                ref={inputRef}
+                id="assistant-message"
+                className="w-full resize-none border-0 bg-transparent text-[13px] leading-6 placeholder:text-muted focus:outline-none"
+                placeholder={
+                  status?.ai_mode === "disabled"
+                    ? "The assistant is disabled. You can still create items manually."
+                    : "What’s on your mind?"
+                }
+                rows={2}
+                maxLength={8000}
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                disabled={send.isPending || status?.ai_mode === "disabled"}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !event.nativeEvent.isComposing
+                  ) {
+                    event.preventDefault();
+                    void submit();
+                  }
+                }}
+              />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[9px] text-muted">
+                  {input.length > 7000
+                    ? `${input.length.toLocaleString()} / 8,000`
+                    : "Shift + Enter for a new line"}
+                </span>
+                <div className="flex gap-2">
+                  {speech.isSupported && (
+                    <button
+                      type="button"
+                      className={clsx(
+                        "icon-button",
+                        speech.listening && "!bg-red-100 !text-red-600",
+                      )}
+                      disabled={send.isPending}
+                      onClick={speech.toggle}
+                      aria-label={
+                        speech.listening
+                          ? "Stop dictation"
+                          : "Start browser dictation"
+                      }
+                      title="Uses your browser’s speech service; audio may leave your device"
+                    >
+                      <Mic size={17} />
+                    </button>
+                  )}
+                  <Button
+                    type="submit"
+                    className="!min-h-8 !rounded-lg !p-2"
+                    disabled={
+                      !input.trim() ||
+                      send.isPending ||
+                      status?.ai_mode === "disabled"
+                    }
+                    aria-label="Send message"
+                  >
+                    <Send size={16} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <p className="mt-3 flex items-start justify-center gap-1.5 text-center text-[9px] leading-4 text-muted">
+              <ShieldCheck size={11} className="mt-0.5 shrink-0" />
+              Review before saving. Each request is independent; include all
+              needed context.
+            </p>
+          </form>
         </div>
-        <div className={clsx("flex items-center gap-2 mt-1 px-1", isUser && "justify-end")}>
-          <span className="text-[10px] text-gray-400">
-            {new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-          {intent && (
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
-              {intent} agent
-            </span>
-          )}
-          {!isUser && (
-             <div className="flex gap-2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-               <button onClick={handleCopy} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Copy response">
-                  <Copy className="w-3.5 h-3.5" />
-               </button>
-               {isError && onRetry && (
-                 <button onClick={onRetry} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Retry">
-                    <RefreshCw className="w-3.5 h-3.5" />
-                 </button>
-               )}
-             </div>
-          )}
-        </div>
+        <WorkflowVisualizer run={latest} loading={send.isPending} />
       </div>
-      {isUser && (
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center dark:bg-blue-900">
-          <User className="w-5 h-5 text-blue-600 dark:text-blue-300" />
-        </div>
-      )}
-    </motion.div>
+      <ConfirmDialog
+        open={clearOpen}
+        onOpenChange={setClearOpen}
+        title="Clear assistant history?"
+        description="This removes your messages and pending proposals. Tasks, notes, events, and reminders you already saved will stay in your workspace."
+        label="Clear history"
+        onConfirm={() => clear.mutateAsync()}
+      />
+    </>
   );
 }
 
-export default function ChatWindow() {
-  const [input, setInput] = useState("");
-  const { messages, sendMessage, isLoading, activeAgent, availableModels, selectedModel, setSelectedModel, loadModels } = useAppStore();
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const { transcript, listening, resetTranscript, browserSupportsSpeechRecognition } = useSpeechRecognition();
-
-  useEffect(() => {
-    loadModels();
-  }, [loadModels]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
-
-  useEffect(() => {
-    if (transcript) {
-      setInput(transcript);
-    }
-  }, [transcript]);
-
-  const toggleListening = () => {
-    if (listening) {
-      SpeechRecognition.stopListening();
-    } else {
-      resetTranscript();
-      SpeechRecognition.startListening({ continuous: true });
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    if (listening) {
-      SpeechRecognition.stopListening();
-    }
-
-    const text = input.trim();
-    setInput("");
-    resetTranscript();
-    await sendMessage(text);
-  };
-
+function Conversation({ run }: { run: ChatRun }) {
+  const actionCount =
+    run.proposal.tasks.length +
+    run.proposal.notes.length +
+    run.proposal.events.length +
+    run.proposal.reminders.length;
+  const apply = useWorkspaceMutation(
+    () => api<ChatRun>(`/chat/${run.id}/apply`, { method: "POST" }),
+    "Your proposal is saved to the workspace",
+  );
+  const discard = useWorkspaceMutation(
+    () => api<ChatRun>(`/chat/${run.id}/discard`, { method: "POST" }),
+    "Proposal discarded. Nothing was saved.",
+  );
+  const collections = ["tasks", "notes", "events", "reminders"] as Kind[];
   return (
-    <div className="flex flex-col h-full w-full max-w-4xl mx-auto rounded-2xl overflow-hidden bg-gray-50/50 border border-gray-200 shadow-sm dark:bg-zinc-900 dark:border-zinc-800">
-      {availableModels && availableModels.length > 0 && (
-        <div className="flex justify-end p-2 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="text-xs border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white px-2 py-1"
-          >
-            {availableModels.map(model => (
-              <option key={model} value={model}>{model}</option>
-            ))}
-          </select>
-        </div>
-      )}
-      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-        <AnimatePresence>
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-4">
-              <Bot className="w-12 h-12 opacity-50" />
-              <p className="text-sm">Hi, I&apos;m your AI Personal Operations Manager.</p>
-              <div className="flex gap-2 flex-wrap justify-center max-w-md">
-                <span className="text-xs bg-white border rounded-full px-3 py-1 cursor-pointer hover:bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700" onClick={() => setInput("Plan my week for exams")}>&quot;Plan my week for exams&quot;</span>
-                <span className="text-xs bg-white border rounded-full px-3 py-1 cursor-pointer hover:bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700" onClick={() => setInput("Summarize this meeting: ...")}>&quot;Summarize a meeting&quot;</span>
-                <span className="text-xs bg-white border rounded-full px-3 py-1 cursor-pointer hover:bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700" onClick={() => setInput("Add task: Finish project by Friday")}>&quot;Add task&quot;</span>
-              </div>
-            </div>
-          ) : (
-            messages.map((msg: { id: string; role: string; content: string; timestamp: string; intent?: string, isError?: boolean, lastUserMessage?: string }) => (
-              <MessageBubble key={msg.id} {...msg} onRetry={msg.isError && msg.lastUserMessage ? () => sendMessage(msg.lastUserMessage as string) : undefined} />
-            ))
-          )}
-        </AnimatePresence>
-
-        {isLoading && (
-          <div className="flex items-center gap-3 mt-4 text-gray-400">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center dark:bg-indigo-900">
-              <Loader2 className="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-300" />
-            </div>
-            <div className="bg-white p-3 rounded-2xl rounded-tl-sm border border-gray-100 shadow-sm text-sm flex items-center gap-2 dark:bg-zinc-800 dark:border-zinc-700">
-              {activeAgent ? (
-                <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> {activeAgent} is working...</span>
-              ) : (
-                <span className="flex space-x-1">
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
+    <div className="mb-8 space-y-5">
+      <div className="ml-auto max-w-[90%] rounded-2xl rounded-tr-sm bg-accent-soft px-4 py-3.5">
+        <p className="whitespace-pre-wrap break-words text-[13px] leading-6">
+          {run.user_input}
+        </p>
+        <p className="mt-2 text-right text-[9px] text-muted">
+          {formatTime(run.created_at)}
+        </p>
       </div>
-
-      <div className="p-4 bg-white border-t border-gray-200 dark:bg-zinc-900 dark:border-zinc-800">
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask me to plan, take notes, or manage your schedule..."
-            className="flex-1 px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
-            disabled={isLoading}
-          />
-          {browserSupportsSpeechRecognition && (
-            <button
-              type="button"
-              onClick={toggleListening}
+      <div className="flex gap-3">
+        <span className="agent-icon mt-0.5">
+          <Sparkles size={15} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-semibold">AI Ops</span>
+            <Badge tone="gray">
+              {run.intent === "general" ? "Assistant" : `${run.intent} agent`}
+            </Badge>
+          </div>
+          <p className="whitespace-pre-wrap break-words text-[13px] leading-7">
+            {run.proposal.message}
+          </p>
+          {actionCount > 0 && (
+            <div
               className={clsx(
-                "p-3 rounded-xl transition-colors",
-                listening ? "bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400 animate-pulse" : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                "mt-4 overflow-hidden rounded-xl border border-line",
+                run.status === "discarded" && "opacity-60",
               )}
-              title={listening ? "Stop listening" : "Start dictation"}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mic"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-            </button>
+              <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas px-4 py-3">
+                <span className="text-[10px] font-semibold uppercase tracking-wider">
+                  {run.status === "pending"
+                    ? "Ready for your review"
+                    : run.status === "applied"
+                      ? "Saved to your workspace"
+                      : "Proposal discarded"}
+                </span>
+                <Badge tone={run.status === "applied" ? "teal" : "gray"}>
+                  {actionCount} {actionCount === 1 ? "item" : "items"}
+                </Badge>
+              </div>
+              <p className="border-b border-line px-4 py-2 text-[10px] text-muted">
+                Dates and times shown in {browserTimezone()}.
+              </p>
+              <div className="divide-y divide-line">
+                {run.proposal.tasks.map((task, i) => (
+                  <div key={`task-${i}`} className="flex gap-3 p-4">
+                    <CircleCheck
+                      size={16}
+                      className="mt-0.5 shrink-0 text-accent"
+                    />
+                    <div className="min-w-0">
+                      <p className="break-words text-xs font-medium">
+                        {task.title}
+                      </p>
+                      <p className="mt-1.5 text-[10px] text-muted">
+                        Task · {task.priority} priority ·{" "}
+                        {formatDate(task.due_at, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {run.proposal.notes.map((note, i) => (
+                  <div key={`note-${i}`} className="flex gap-3 p-4">
+                    <NotebookPen
+                      size={16}
+                      className="mt-0.5 shrink-0 text-accent"
+                    />
+                    <div className="min-w-0">
+                      <p className="break-words text-xs font-medium">
+                        {note.title}
+                      </p>
+                      {note.summary && (
+                        <p className="mt-2 break-words text-xs leading-6 text-muted">
+                          {note.summary}
+                        </p>
+                      )}
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-[10px] font-medium text-accent">
+                          Review note content
+                        </summary>
+                        <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-6 text-muted">
+                          {note.content}
+                        </p>
+                        {note.action_items.length > 0 && (
+                          <ul className="mt-2 list-inside list-disc text-xs leading-6">
+                            {note.action_items.map((item, idx) => (
+                              <li key={idx}>{item}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </details>
+                    </div>
+                  </div>
+                ))}
+                {run.proposal.events.map((event, i) => (
+                  <div key={`event-${i}`} className="flex gap-3 p-4">
+                    <CalendarDays
+                      size={16}
+                      className="mt-0.5 shrink-0 text-accent"
+                    />
+                    <div className="min-w-0">
+                      <p className="break-words text-xs font-medium">
+                        {event.title}
+                      </p>
+                      <p className="mt-1.5 text-[10px] leading-5 text-muted">
+                        {formatDate(event.start_time, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                        <br />
+                        to{" "}
+                        {formatDate(event.end_time, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </p>
+                      {event.description && (
+                        <p className="mt-1 text-xs text-muted">
+                          {event.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {run.proposal.reminders.map((reminder, i) => (
+                  <div key={`reminder-${i}`} className="flex gap-3 p-4">
+                    <Bell size={16} className="mt-0.5 shrink-0 text-accent" />
+                    <div className="min-w-0">
+                      <p className="break-words text-xs font-medium">
+                        {reminder.title}
+                      </p>
+                      <p className="mt-1.5 text-[10px] text-muted">
+                        Reminder · {reminder.urgency} urgency ·{" "}
+                        {formatDate(reminder.due_at, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </p>
+                      {reminder.suggestion && (
+                        <p className="mt-1 text-xs text-muted">
+                          {reminder.suggestion}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {run.status === "pending" ? (
+                <div className="flex flex-wrap items-center gap-2 border-t border-line bg-canvas px-4 py-3">
+                  <Button
+                    className="!min-h-8 !py-2 !text-xs"
+                    loading={apply.isPending}
+                    disabled={discard.isPending}
+                    onClick={() => apply.mutate()}
+                  >
+                    <Check size={13} />
+                    Confirm & save
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="!min-h-8 !py-2 !text-xs"
+                    loading={discard.isPending}
+                    disabled={apply.isPending}
+                    onClick={() => discard.mutate()}
+                  >
+                    Discard
+                  </Button>
+                </div>
+              ) : run.status === "applied" ? (
+                <div className="flex flex-wrap gap-4 border-t border-line px-4 py-3">
+                  {collections
+                    .filter((name) => run.proposal[name].length > 0)
+                    .map((name) => (
+                      <Link
+                        className="text-link"
+                        href={name === "events" ? "/calendar" : `/${name}`}
+                        key={name}
+                      >
+                        View {name}
+                        <ArrowRight size={11} />
+                      </Link>
+                    ))}
+                </div>
+              ) : null}
+            </div>
           )}
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <Send className="w-5 h-5" />
-          </button>
-        </form>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-[9px] text-muted">
+              {run.mode === "demo" ? "Demo template" : run.model}
+            </span>
+            <button
+              className="icon-button !h-6 !w-6"
+              aria-label="Copy assistant reply"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(run.proposal.message);
+                  toast.success("Reply copied");
+                } catch {
+                  toast.error("Clipboard access is unavailable.");
+                }
+              }}
+            >
+              <Copy size={11} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,22 @@
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+# Starlette 1.6 references an AnyIO alias pending an upstream update.
+filterwarnings = [
+  "error",
+  "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = ["backend/migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501", "B008"]
+
+[tool.coverage.run]
+source = ["backend"]
+omit = ["backend/tests/*", "backend/migrations/*"]
