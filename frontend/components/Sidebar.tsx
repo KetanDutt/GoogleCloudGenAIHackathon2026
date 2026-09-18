@@ -2,103 +2,175 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageSquare, CheckSquare, StickyNote, LayoutDashboard, LogOut, Calendar } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
-import { useAppStore } from "@/store/useAppStore";
+import {
+  Bell,
+  CalendarDays,
+  CircleCheck,
+  LayoutGrid,
+  LogOut,
+  NotebookPen,
+  Settings2,
+  Sparkles,
+  Layers3,
+  ArrowUpRight,
+} from "lucide-react";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import { avatars } from "@/lib/avatars";
+import { api, errorMessage, setCsrfToken } from "@/lib/api";
+import { useSession, useSystemStatus } from "@/lib/queries";
 
-const publicRoutes = ["/login", "/register"];
-
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/chat", label: "AI Chat", icon: MessageSquare },
-  { href: "/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/notes", label: "Notes", icon: StickyNote },
-  { href: "/calendar", label: "Calendar", icon: Calendar },
+export const navItems = [
+  { href: "/", label: "Overview", icon: LayoutGrid },
+  { href: "/chat", label: "AI assistant", icon: Sparkles },
+  { href: "/tasks", label: "Tasks", icon: CircleCheck },
+  { href: "/notes", label: "Notes", icon: NotebookPen },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/reminders", label: "Reminders", icon: Bell },
 ];
-
-const AVATARS: Record<string, string> = {
-  "1": "👤",
-  "2": "👩‍💻",
-  "3": "👨‍💻",
-  "4": "🤖",
-  "5": "🦊",
-  "6": "🦄",
-  "7": "🐸",
-  "8": "🐻",
-  "9": "🦖",
-  "10": "🐶",
-};
-
-export default function Sidebar() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { token, user, logout } = useAppStore();
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
-
-  if (publicRoutes.includes(pathname)) {
-    return null;
-  }
-
+export function Brand({ light = false }: { light?: boolean }) {
   return (
-    <aside className="w-64 border-r border-gray-200 bg-white h-screen flex flex-col pt-8 dark:bg-zinc-900 dark:border-zinc-800" suppressHydrationWarning>
-      <div className="px-6 pb-6">
-        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
-          AI Ops Manager
-        </h1>
-        <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
-          Multi-Agent System
-        </p>
+    <Link
+      href="/"
+      className={clsx("flex items-center gap-3", light && "text-white")}
+      aria-label="AI Ops home"
+    >
+      <span className="brand-mark">
+        <Layers3 size={22} strokeWidth={1.8} />
+      </span>
+      <span>
+        <span className="block text-[19px] font-bold tracking-tight">
+          AI Ops<span className="ml-1 text-accent">.</span>
+        </span>
+        <span
+          className={clsx(
+            "block text-[10px] font-medium tracking-[.1em]",
+            light ? "text-white/65" : "text-muted",
+          )}
+        >
+          PERSONAL WORKSPACE
+        </span>
+      </span>
+    </Link>
+  );
+}
+export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const { data: status } = useSystemStatus();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  async function logout() {
+    setBusy(true);
+    try {
+      await api("/auth/logout", { method: "POST" });
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      setCsrfToken(null);
+      queryClient.setQueryData(["session"], null);
+      onNavigate?.();
+      router.replace("/login");
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="flex h-full flex-col bg-surface px-5 py-7">
+      <div className="px-2">
+        <Brand />
       </div>
-
-      <nav className="flex-1 px-4 space-y-2">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium",
-                isActive
-                  ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                  : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-zinc-800"
-              )}
-            >
-              <Icon className="w-5 h-5" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="p-4 mt-auto border-t border-gray-200 dark:border-zinc-800 flex flex-col gap-2">
-        {user && (
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-lg">
-              {AVATARS[user.avatar] || "👤"}
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-medium dark:text-white truncate">{user.username}</p>
-              <p className="text-xs text-gray-500 truncate">{user.email}</p>
-            </div>
-          </div>
-        )}
-        {token && (
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+      <p className="mb-3 mt-11 px-3 text-[10px] font-semibold tracking-[.16em] text-muted">
+        WORKSPACE
+      </p>
+      <nav aria-label="Main navigation" className="space-y-1.5">
+        {navItems.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            onClick={onNavigate}
+            aria-current={pathname === href ? "page" : undefined}
+            className={clsx("nav-item", pathname === href && "active")}
           >
-            <LogOut className="w-5 h-5" />
-            Logout
+            <Icon size={19} strokeWidth={1.7} />
+            <span>{label}</span>
+            {href === "/chat" && (
+              <span
+                aria-hidden="true"
+                className="ml-auto rounded bg-accent/10 px-1.5 py-0.5 text-[9px] font-semibold text-accent"
+              >
+                AI
+              </span>
+            )}
+          </Link>
+        ))}
+      </nav>
+      <div className="mt-auto pt-8">
+        <div className="sidebar-tip">
+          <div className="mb-2 flex items-center gap-2 text-accent">
+            <Sparkles size={16} />
+            <span className="text-xs font-semibold">
+              A little help, a lot of clarity
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed text-muted">
+            Turn that idea into a next step. Your assistant is ready when you
+            are.
+          </p>
+          <Link
+            href="/chat"
+            onClick={onNavigate}
+            className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-accent"
+          >
+            Let’s make a plan <ArrowUpRight size={14} />
+          </Link>
+        </div>
+        <Link
+          href="/profile"
+          onClick={onNavigate}
+          className={clsx("nav-item mt-4", pathname === "/profile" && "active")}
+          aria-current={pathname === "/profile" ? "page" : undefined}
+        >
+          <Settings2 size={19} strokeWidth={1.7} />
+          Settings
+        </Link>
+        <div className="mt-5 flex items-center gap-3 border-t border-line px-1 pt-5">
+          <Link
+            href="/profile"
+            onClick={onNavigate}
+            aria-label="Your profile"
+            className="avatar"
+          >
+            {avatars.find((avatar) => avatar.value === session?.user.avatar)
+              ?.symbol || session?.user.username.slice(0, 2).toUpperCase()}
+          </Link>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">
+              {session?.user.username}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted">
+              {session?.user.is_demo
+                ? "Demo workspace"
+                : status?.ai_mode === "vertex"
+                  ? "Personal workspace"
+                  : "Local workspace"}
+            </p>
+          </div>
+          <button
+            aria-label="Sign out"
+            title="Sign out"
+            disabled={busy}
+            onClick={logout}
+            className="icon-button"
+          >
+            <LogOut size={17} />
           </button>
-        )}
+        </div>
       </div>
-    </aside>
+    </div>
   );
 }

@@ -1,139 +1,65 @@
-import json
-import asyncio
-import logging
-from typing import Dict, Any
+"""Two bounded model calls at most: classify, then a specialized structured proposal."""
 
-from models.schemas import ChatRequest, ChatResponse
-from agents.orchestrator import route_user_input
-from agents.planner import generate_tasks
-from agents.calendar import schedule_task
-from agents.notes import summarize_and_extract
-from agents.reminder import assess_urgency
+import threading
 
-from tools.task_tools import add_task
-from tools.notes_tools import save_note
-from tools.calendar_tools import schedule_event
-from tools.reminder_tools import save_reminder
+from backend.agents.calendar import schedule_task
+from backend.agents.notes import summarize_and_extract
+from backend.agents.orchestrator import route_user_input
+from backend.agents.planner import generate_tasks
+from backend.agents.reminder import assess_urgency
+from backend.models.schemas import Proposal
+from backend.services.vertex_client import AIUnavailable, VertexClient
 
-logger = logging.getLogger(__name__)
 
-async def process_chat_workflow(request: ChatRequest, current_user: str) -> ChatResponse:
-    """
-    Main workflow engine. Routes user input and processes it through specialized agents asynchronously.
-    """
-    user_input = request.user_input
-    user_id = current_user
-    model_name = request.model_name
+class Workflow:
+    def __init__(self, client: VertexClient):
+        self.client = client
+        self.slots = threading.BoundedSemaphore(4)
 
-    trace = [{"step": "User Input", "details": f"[{model_name}] {user_input}"}]
-
-    try:
-        # 1. Orchestrate
-        intent = await asyncio.to_thread(route_user_input, user_input, model_name)
-        trace.append({"step": "Orchestrator", "details": f"Routed to {intent} agent"})
-    except Exception as e:
-        logger.error(f"Orchestrator failed: {e}")
-        intent = "unknown"
-        trace.append({"step": "Orchestrator", "details": f"Failed to classify intent: {e}"})
-        return ChatResponse(intent=intent, response={"message": "Could not determine intent."}, trace=trace)
-
-    response_data = {}
-
-    try:
-        if intent == "planner":
-            # Generate tasks
-            trace.append({"step": "Agent Processing", "details": "Planner agent generating tasks..."})
-            tasks = await asyncio.to_thread(generate_tasks, user_input, model_name)
-            scheduled_tasks = []
-
-            for task_name in tasks:
-                # Schedule each task via calendar agent
-                trace.append({"step": "Agent Processing", "details": f"Calendar agent scheduling task: {task_name}"})
-                try:
-                    time_suggestion = await asyncio.to_thread(schedule_task, task_name, model_name)
-                    start_time = time_suggestion.get("start_time")
-                    end_time = time_suggestion.get("end_time")
-                except Exception as e:
-                    logger.error(f"Calendar scheduling failed for task '{task_name}': {e}")
-                    start_time = "Unknown"
-                    end_time = "Unknown"
-
-                # Store in BigQuery
-                trace.append({"step": "Tool Execution", "details": "Adding task and event to database"})
-                await asyncio.to_thread(add_task, user_id, task_name, start_time)
-                if start_time != "Unknown":
-                    await asyncio.to_thread(schedule_event, user_id, task_name, start_time, end_time)
-
-                scheduled_tasks.append({
-                    "task": task_name,
-                    "scheduled_start": start_time,
-                    "scheduled_end": end_time
-                })
-
-            trace.append({"step": "Database Sync", "details": f"Saved {len(scheduled_tasks)} scheduled tasks"})
-            response_data = {"tasks_created": scheduled_tasks}
-
-        elif intent == "notes":
-            # Summarize and extract
-            trace.append({"step": "Agent Processing", "details": "Notes agent summarizing and extracting action items..."})
-            extracted = await asyncio.to_thread(summarize_and_extract, user_input, model_name)
-            summary = extracted.get("summary")
-            action_items = extracted.get("action_items", [])
-
-            action_items_str = json.dumps(action_items)
-
-            # Save notes
-            trace.append({"step": "Tool Execution", "details": "Saving note to database"})
-            await asyncio.to_thread(save_note, user_id, user_input, summary, action_items_str)
-            trace.append({"step": "Database Sync", "details": "Note saved successfully"})
-
-            response_data = {
-                "summary": summary,
-                "action_items": action_items
+    def propose(self, text: str, timezone: str, model: str):
+        if self.client.settings.ai_mode == "disabled":
+            raise AIUnavailable(
+                "The assistant is disabled. You can still manage your workspace manually."
+            )
+        if not self.slots.acquire(blocking=False):
+            raise AIUnavailable("The assistant is busy. Please try again shortly.")
+        try:
+            intent = route_user_input(self.client, text, timezone, model)
+            agents = {
+                "planner": generate_tasks,
+                "notes": summarize_and_extract,
+                "calendar": schedule_task,
+                "reminder": assess_urgency,
             }
-
-        elif intent == "calendar":
-            # Schedule a single event
-            trace.append({"step": "Agent Processing", "details": "Calendar agent suggesting times..."})
-            time_suggestion = await asyncio.to_thread(schedule_task, user_input, model_name)
-            start_time = time_suggestion.get("start_time")
-            end_time = time_suggestion.get("end_time")
-
-            trace.append({"step": "Tool Execution", "details": "Saving event to database"})
-            await asyncio.to_thread(schedule_event, user_id, user_input, start_time, end_time)
-            trace.append({"step": "Database Sync", "details": "Event saved successfully"})
-
-            response_data = {
-                "event_scheduled": user_input,
-                "start_time": start_time,
-                "end_time": end_time
-            }
-
-        elif intent == "reminder":
-            trace.append({"step": "Agent Processing", "details": "Reminder agent assessing urgency..."})
-            urgency_data = await asyncio.to_thread(assess_urgency, user_input, model_name)
-
-            urgency = urgency_data.get("urgency_level")
-            suggestion = urgency_data.get("reminder_suggestion")
-
-            trace.append({"step": "Tool Execution", "details": "Saving reminder to database"})
-            await asyncio.to_thread(save_reminder, user_id, user_input, urgency, suggestion)
-            trace.append({"step": "Database Sync", "details": "Reminder saved successfully"})
-
-            response_data = {
-                "reminder_set_for": user_input,
-                "urgency": urgency,
-                "suggestion": suggestion
-            }
-        else:
-            intent = "unknown"
-            trace.append({"step": "Orchestrator", "details": "Could not classify intent."})
-            response_data = {"message": "Could not determine intent."}
-
-    except Exception as e:
-        logger.error(f"Error during workflow execution: {e}")
-        intent = "error"
-        trace.append({"step": "Error", "details": str(e)})
-        response_data = {"error": "An error occurred while processing your request.", "details": str(e)}
-
-    return ChatResponse(intent=intent, response=response_data, trace=trace)
+            if intent in agents:
+                proposal = agents[intent](self.client, text, timezone, model)
+            else:
+                proposal = Proposal(
+                    message="I can help turn a goal into tasks, save or summarize notes, suggest calendar events, and organize reminders. Tell me what you would like to work on. I will always ask you to review before saving."
+                )
+            # Revalidate even when the provider returns a Pydantic instance.
+            proposal = Proposal.model_validate(proposal.model_dump())
+            trace = [
+                {"step": "Orchestrator", "details": f"Routed to {intent}."},
+                {
+                    "step": "Demo template"
+                    if self.client.settings.ai_mode == "demo"
+                    else "Specialist agent",
+                    "details": "Deterministic local example; no AI call."
+                    if self.client.settings.ai_mode == "demo"
+                    else f"Generated a structured {intent} proposal.",
+                },
+                {
+                    "step": "Validation",
+                    "details": f"Validated {proposal.action_count} proposed item(s).",
+                },
+                {
+                    "step": "Review",
+                    "details": "Waiting for your confirmation."
+                    if proposal.action_count
+                    else "No workspace changes proposed.",
+                },
+            ]
+            return intent, proposal, trace
+        finally:
+            self.slots.release()

@@ -1,119 +1,121 @@
-import axios from 'axios';
-import toast from 'react-hot-toast';
+import type { Session } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+let csrfToken: string | null = null;
+export const setCsrfToken = (token: string | null) => {
+  csrfToken = token;
+};
 
-export const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Add a response interceptor to catch common API errors globally
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // If it's a network error or CORS issue (no response object)
-    if (!error.response) {
-       toast.error("Network error: Could not connect to the backend server.", { id: 'network-err' });
-       return Promise.reject(error);
-    }
-
-    // If we get an error response back from the server (e.g. 500)
-    const status = error.response.status;
-    if (status >= 500) {
-       toast.error("Server error: The backend encountered an unexpected issue.", { id: 'server-err' });
-    } else if (status >= 400) {
-       // Optional: Could display 400s specifically if needed, but keeping it general
-       console.warn("Client error occurred:", error.response.data);
-    }
-
-    return Promise.reject(error);
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public requestId?: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
   }
-);
+}
 
-export const loginAPI = async (email: string, password: string) => {
-  const response = await api.post('/login', { email, password });
-  return response.data;
-};
+export function errorMessage(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : "Something went wrong. Please try again.";
+}
 
-export const fetchUserMeAPI = async () => {
-  const response = await api.get('/users/me');
-  return response.data;
-};
+type ApiOptions = Omit<RequestInit, "body"> & { body?: unknown; raw?: boolean };
 
-export const registerAPI = async (email: string, password: string, username: string, avatar: string) => {
-  const response = await api.post('/register', { email, password, username, avatar });
-  return response.data;
-};
-
-export const sendChatRequest = async (userInput: string, modelName?: string) => {
-  const payload: Record<string, string> = { user_input: userInput };
-  if (modelName) {
-    payload.model_name = modelName;
+export async function api<T>(
+  path: string,
+  options: ApiOptions = {},
+): Promise<T> {
+  const { body, raw, signal, ...rest } = options;
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    path === "/chat" ? 60_000 : 20_000,
+  );
+  const cancel = () => controller.abort();
+  signal?.addEventListener("abort", cancel, { once: true });
+  if (signal?.aborted) controller.abort();
+  const headers = new Headers(options.headers);
+  if (body !== undefined) headers.set("Content-Type", "application/json");
+  if (
+    csrfToken &&
+    options.method &&
+    !["GET", "HEAD"].includes(options.method)
+  ) {
+    headers.set("X-CSRF-Token", csrfToken);
   }
-  const response = await api.post('/chat', payload);
-  return response.data;
-};
+  try {
+    const response = await fetch(`/api/v1${path}`, {
+      ...rest,
+      headers,
+      credentials: "same-origin",
+      cache: "no-store",
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      let message =
+        typeof data.detail === "string"
+          ? data.detail
+          : "The request could not be completed.";
+      if (response.status === 422 && Array.isArray(data.errors)) {
+        message = data.errors
+          .map(
+            (issue: { loc?: (string | number)[]; msg?: string }) =>
+              `${String(issue.loc?.at(-1) ?? "Field").replaceAll("_", " ")}: ${issue.msg || "invalid value"}`,
+          )
+          .join(". ");
+      }
+      throw new ApiError(
+        message,
+        response.status,
+        response.headers.get("x-request-id") || undefined,
+      );
+    }
+    if (raw) return (await response.blob()) as T;
+    return response.status === 204
+      ? (undefined as T)
+      : ((await response.json()) as T);
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (signal?.aborted) throw error; // React Query owns cancellations.
+    throw new ApiError(
+      controller.signal.aborted
+        ? "This request took too long. Refresh to check its status before retrying."
+        : "Unable to connect. Check your connection and try again.",
+      0,
+    );
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", cancel);
+  }
+}
 
-export const fetchModelsAPI = async () => {
-  const response = await api.get('/models');
-  return response.data;
-};
+export async function getSession(
+  signal?: AbortSignal,
+): Promise<Session | null> {
+  try {
+    const session = await api<Session>("/auth/session", { signal });
+    setCsrfToken(session.csrf_token);
+    return session;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      setCsrfToken(null);
+      return null;
+    }
+    throw error;
+  }
+}
 
-export const fetchEvents = async () => {
-  const response = await api.get('/events');
-  return response.data;
-};
-
-export const fetchTasks = async () => {
-  const response = await api.get(`/tasks`);
-  return response.data;
-};
-
-export const fetchNotes = async () => {
-  const response = await api.get(`/notes`);
-  return response.data;
-};
-
-export const completeTaskAPI = async (taskName: string) => {
-  const response = await api.put('/tasks/complete', { task_name: taskName });
-  return response.data;
-};
-
-export const editTaskAPI = async (taskId: string, name?: string, deadline?: string) => {
-  const response = await api.put('/tasks/edit', { task_id: taskId, name, deadline });
-  return response.data;
-};
-
-export const deleteTaskAPI = async (taskId: string) => {
-  const response = await api.delete('/tasks/delete', { data: { task_id: taskId } });
-  return response.data;
-};
-
-export const editNoteAPI = async (noteId: string, content: string) => {
-  const response = await api.put('/notes/edit', { note_id: noteId, content });
-  return response.data;
-};
-
-export const deleteNoteAPI = async (noteId: string) => {
-  const response = await api.delete('/notes/delete', { data: { note_id: noteId } });
-  return response.data;
-};
-
-export const fetchHealth = async () => {
-  const response = await api.get('/health');
-  return response.data;
-};
+export function queryString(
+  params: Record<string, string | number | boolean | undefined>,
+): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "") query.set(key, String(value));
+  }
+  return query.size ? `?${query}` : "";
+}

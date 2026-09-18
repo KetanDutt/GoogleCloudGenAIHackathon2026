@@ -1,195 +1,196 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useAppStore } from "@/store/useAppStore";
-import { CheckCircle2, Clock, RotateCw, Calendar, Check, Edit2, Trash2, X, Save } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { CircleCheck, Plus, RefreshCw, SlidersHorizontal } from "lucide-react";
 import clsx from "clsx";
+import { useWorkspace } from "@/lib/queries";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import type { Page, Task } from "@/lib/types";
+import RecordEditor, { DeleteRecordDialog } from "./RecordEditor";
+import TaskRow from "./TaskRow";
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  Pagination,
+  SearchInput,
+} from "./ui/Primitives";
 
 export default function TaskList() {
-  const { tasks, loadTasks, isLoading, completeTask, editTask, deleteTask } = useAppStore();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editDeadline, setEditDeadline] = useState("");
-
-  useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
-
-  const filteredTasks = useMemo(() => {
-    if (!searchQuery.trim()) return tasks;
-    const q = searchQuery.toLowerCase();
-    return tasks.filter(task => task.task_name.toLowerCase().includes(q));
-  }, [tasks, searchQuery]);
-
+  const params = useSearchParams();
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 w-full max-w-4xl mx-auto dark:bg-zinc-900 dark:border-zinc-800">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 border-b pb-4 border-gray-100 dark:border-zinc-800 gap-4">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-indigo-500" /> My Tasks
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">Manage and track your action items.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white"
-          />
-          <button
-            onClick={loadTasks}
-            disabled={isLoading}
-            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400"
-            title="Refresh Tasks"
+    <TaskListContent
+      key={params.get("q") || ""}
+      initialSearch={params.get("q") || ""}
+    />
+  );
+}
+function TaskListContent({ initialSearch }: { initialSearch: string }) {
+  const [search, setSearch] = useState(initialSearch);
+  const [filter, setFilter] = useState("all");
+  const [priority, setPriority] = useState("");
+  const [page, setPage] = useState(0);
+  const [editor, setEditor] = useState<Task | "new" | null>(null);
+  const [deleting, setDeleting] = useState<Task | null>(null);
+  const q = useDebouncedValue(search);
+  const query = useWorkspace<Page<Task>>("tasks", {
+    q,
+    limit: 20,
+    offset: page * 20,
+    priority,
+    status: filter === "all" || filter === "overdue" ? undefined : filter,
+    overdue: filter === "overdue" ? true : undefined,
+  });
+  const filters = [
+    ["all", "All tasks"],
+    ["pending", "To do"],
+    ["completed", "Completed"],
+    ["overdue", "Overdue"],
+  ];
+  return (
+    <>
+      <PageHeader
+        eyebrow="ONE STEP AT A TIME"
+        title="Your tasks"
+        description="Big plans begin with small, clear next steps."
+        action={
+          <Button onClick={() => setEditor("new")}>
+            <Plus size={16} />
+            New task
+          </Button>
+        }
+      />
+      <div className="panel overflow-hidden">
+        <div className="toolbar">
+          <div
+            className="flex max-w-full gap-1 overflow-x-auto rounded-lg bg-canvas p-1"
+            role="group"
+            aria-label="Filter tasks"
           >
-            <RotateCw className={clsx("w-5 h-5", isLoading && "animate-spin")} />
-          </button>
+            {filters.map(([value, label]) => (
+              <button
+                key={value}
+                onClick={() => {
+                  setFilter(value);
+                  setPage(0);
+                }}
+                aria-pressed={filter === value}
+                className={clsx("tab", filter === value && "active")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchInput
+              label="Search tasks"
+              placeholder="Search tasks…"
+              value={search}
+              onChange={(value) => {
+                setSearch(value);
+                setPage(0);
+              }}
+            />
+            <div className="relative">
+              <SlidersHorizontal
+                size={14}
+                className="pointer-events-none absolute left-3 top-3.5 text-muted"
+              />
+              <select
+                aria-label="Filter by priority"
+                className="input !pl-8 !text-xs"
+                value={priority}
+                onChange={(e) => {
+                  setPriority(e.target.value);
+                  setPage(0);
+                }}
+              >
+                <option value="">All priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <button
+              className="icon-button"
+              disabled={query.isFetching}
+              onClick={() => void query.refetch()}
+              aria-label="Refresh tasks"
+            >
+              <RefreshCw
+                size={16}
+                className={clsx(query.isFetching && "animate-spin")}
+              />
+            </button>
+          </div>
         </div>
-      </div>
-
-      {filteredTasks.length === 0 ? (
-        <div className="text-center py-12">
-          <Calendar className="w-12 h-12 mx-auto text-gray-200 mb-3 dark:text-gray-700" />
-          <p className="text-gray-500 font-medium">No tasks found.</p>
-          <p className="text-sm text-gray-400 mt-1">Ask the AI to plan your day!</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <AnimatePresence>
-            {filteredTasks.map((task, index) => {
-              const isCompleted = task.status === 'completed';
-              const isEditing = editingTaskId === task.task_name;
-
-              if (isEditing) {
-                return (
-                  <motion.div
-                    key={task.id || task.task_name + index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="p-4 rounded-xl border border-indigo-200 bg-white shadow-sm dark:bg-zinc-800 dark:border-indigo-500/50 flex flex-col gap-3"
-                  >
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border rounded-md dark:bg-zinc-900 dark:border-zinc-700 dark:text-white"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      placeholder="Task name"
-                    />
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="datetime-local"
-                        className="flex-1 px-3 py-2 border rounded-md dark:bg-zinc-900 dark:border-zinc-700 dark:text-white"
-                        value={editDeadline}
-                        onChange={(e) => setEditDeadline(e.target.value)}
-                      />
-                      <button
-                        onClick={() => {
-                          if (editName.trim() !== "") {
-                            editTask(task.task_name, editName, editDeadline ? new Date(editDeadline).toISOString() : undefined);
-                          }
-                          setEditingTaskId(null);
-                        }}
-                        className="p-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors"
-                      >
-                        <Save className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setEditingTaskId(null)}
-                        className="p-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </motion.div>
-                );
+        <div className="border-t border-line">
+          {query.isPending ? (
+            <LoadingState label="Gathering your next steps…" />
+          ) : query.isError ? (
+            <div className="p-5">
+              <ErrorState
+                error={query.error}
+                retry={() => void query.refetch()}
+              />
+            </div>
+          ) : !query.data.items.length ? (
+            <EmptyState
+              icon={<CircleCheck size={26} />}
+              title={
+                search || filter !== "all" || priority
+                  ? "A clean slate in this view"
+                  : "Your next chapter starts here"
               }
-
-              return (
-                <motion.div
-                  key={task.id || task.task_name + index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={clsx(
-                    "group flex items-start gap-4 p-4 rounded-xl border transition-all",
-                    isCompleted
-                      ? "border-emerald-100 bg-emerald-50/30 dark:border-emerald-900/30 dark:bg-emerald-900/10 opacity-70"
-                      : "border-gray-100 bg-gray-50/30 hover:border-indigo-200 hover:shadow-md dark:bg-zinc-800/50 dark:border-zinc-800 dark:hover:border-indigo-500/30"
-                  )}
-                >
-                  <div className="pt-1">
-                    <button
-                      onClick={() => !isCompleted && completeTask(task.task_name)}
-                      disabled={isCompleted}
-                      className={clsx(
-                        "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors focus:outline-none",
-                        isCompleted
-                          ? "bg-emerald-500 border-emerald-500 cursor-default"
-                          : "border-gray-300 cursor-pointer group-hover:border-indigo-500 dark:border-gray-600"
-                      )}
-                    >
-                      <Check className={clsx("w-3.5 h-3.5", isCompleted ? "text-white opacity-100" : "text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity")} />
-                    </button>
-                  </div>
-                  <div className="flex-1 flex justify-between items-start">
-                    <div>
-                      <h3 className={clsx(
-                        "font-medium transition-colors",
-                        isCompleted ? "text-gray-500 line-through dark:text-gray-500" : "text-gray-800 dark:text-gray-200"
-                      )}>
-                        {task.task_name}
-                      </h3>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                        {task.deadline && !isNaN(new Date(task.deadline).getTime()) && (
-                          <span className={clsx(
-                            "flex items-center gap-1 px-2 py-1 rounded-md",
-                            isCompleted ? "bg-transparent text-gray-400" : "bg-gray-100 dark:bg-zinc-700"
-                          )}>
-                            <Clock className="w-3 h-3" />
-                            Deadline: {new Date(task.deadline).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                          </span>
-                        )}
-                        {task.created_at && !isNaN(new Date(task.created_at).getTime()) && (
-                          <span className="flex items-center gap-1 opacity-70">
-                            Created: {new Date(task.created_at).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {!isCompleted && (
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => {
-                            setEditingTaskId(task.task_name);
-                            setEditName(task.task_name);
-                            setEditDeadline(task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : "");
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors dark:hover:bg-indigo-900/30 dark:hover:text-indigo-400"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => deleteTask(task.task_name)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors dark:hover:bg-red-900/30 dark:hover:text-red-400"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+              description={
+                search || filter !== "all" || priority
+                  ? "Try a different search or filter to find your tasks."
+                  : "Add your first task, or ask the assistant to help turn a goal into a plan."
+              }
+              action={
+                <Button variant="secondary" onClick={() => setEditor("new")}>
+                  <Plus size={15} />
+                  Create a task
+                </Button>
+              }
+            />
+          ) : (
+            query.data.items.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                onEdit={() => setEditor(task)}
+                onDelete={() => setDeleting(task)}
+              />
+            ))
+          )}
         </div>
-      )}
-    </div>
+        {query.data && (
+          <Pagination
+            total={query.data.total}
+            page={page}
+            limit={20}
+            onChange={setPage}
+          />
+        )}
+      </div>
+      <p className="mt-4 text-xs text-muted">
+        You can complete, reopen, or edit any task. Your due dates stay with it.
+      </p>
+      <RecordEditor
+        kind="tasks"
+        open={editor !== null}
+        item={editor && editor !== "new" ? editor : undefined}
+        onClose={() => setEditor(null)}
+      />
+      <DeleteRecordDialog
+        kind="tasks"
+        item={deleting}
+        onClose={() => setDeleting(null)}
+      />
+    </>
   );
 }

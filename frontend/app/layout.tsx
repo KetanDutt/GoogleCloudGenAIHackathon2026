@@ -1,34 +1,37 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import "@fontsource-variable/dm-sans";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
+import Providers from "@/components/Providers";
 import AuthGuard from "@/components/AuthGuard";
-import { Toaster } from "react-hot-toast";
-
-const inter = Inter({ subsets: ["latin"] });
+import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
-  title: "AI Ops Manager",
-  description: "Multi-Agent System for Managing Tasks, Notes, and Calendars",
+  title: {
+    default: "AI Ops — Your personal workspace",
+    template: "%s | AI Ops",
+  },
+  description:
+    "Bring your tasks, notes, calendar, and ideas together. A thoughtful personal workspace with a review-before-save AI assistant.",
+  robots: { index: false, follow: false },
 };
-
+export const viewport: Viewport = {
+  themeColor: "#0c7969",
+  width: "device-width",
+  initialScale: 1,
+};
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-gray-50 flex h-screen overflow-hidden text-gray-900 dark:bg-zinc-950 dark:text-gray-100`}>
-        <AuthGuard>
-          <Sidebar />
-          <main className="flex-1 h-full overflow-y-auto custom-scrollbar">
-            <div className="p-8 max-w-7xl mx-auto space-y-8">
-              {children}
-            </div>
-          </main>
-        </AuthGuard>
-        <Toaster position="bottom-right" />
+      <body>
+        <Providers>
+          <AuthGuard>
+            <AppShell>{children}</AppShell>
+          </AuthGuard>
+        </Providers>
       </body>
     </html>
   );

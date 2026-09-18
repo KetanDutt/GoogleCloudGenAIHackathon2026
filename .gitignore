@@ -1,24 +1,44 @@
-# Byte-compiled / optimized / DLL files
+# Dependencies and generated output
+node_modules/
+.next/
+out/
+dist/
+build/
+.venv/
+venv/
 __pycache__/
 *.py[cod]
-*$py.class
+*.egg-info/
+*.tsbuildinfo
+next-env.d.ts
+.cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage/
+playwright-report/
+test-results/
 
-# Environments
+# Local configuration, credentials, runtime data, and backups
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+.env.*
+!.env.example
+*.pem
+*.key
+*service-account*.json
+*.db
+*.db-*
+*.sqlite*
+*.log
+backend/data/
+mock_db.json
+BigQueryBackups/
+backups/
+backup_*/
 
-# IDEs
+# Editor / OS
 .idea/
 .vscode/
-
-# Build artifacts
-build/
-dist/
-*.egg-info/
-summary.txt
-summerize.py
+.DS_Store
+Thumbs.db
