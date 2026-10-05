@@ -211,11 +211,11 @@ protobuf==7.36.2
     #   googleapis-common-protos
     #   grpcio-status
     #   proto-plus
-psycopg==3.3.5
+psycopg==3.3.6
     # via
     #   -c requirements.txt
     #   -r requirements.in
-psycopg-binary==3.3.5
+psycopg-binary==3.3.6
     # via
     #   -c requirements.txt
     #   psycopg
