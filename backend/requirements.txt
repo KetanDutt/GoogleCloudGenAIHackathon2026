@@ -58,7 +58,7 @@ google-cloud-core==2.7.0
     # via google-cloud-bigquery
 google-crc32c==1.8.0
     # via google-resumable-media
-google-genai==2.24.0
+google-genai==2.27.0
     # via -r requirements.in
 google-resumable-media==2.10.2
     # via google-cloud-bigquery
