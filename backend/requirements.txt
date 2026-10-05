@@ -167,7 +167,7 @@ tzdata==2026.4
     # via -r requirements.in
 urllib3==2.8.0
     # via requests
-uvicorn==0.53.0
+uvicorn==0.54.0
     # via -r requirements.in
 websockets==16.1.1
     # via google-genai
